@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메모</title>
+
+    <link href="../static/css/bootstrap.css" rel="stylesheet" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .book-info-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 15px;
+        }
+
+        .book-image {
+            flex: 1 1 30%;
+        }
+
+        .book-image img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .book-details {
+            flex: 1 1 65%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .book-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .boardwhite10_container {
+            width: 100%;
+            max-width: 800px;
+            padding: 15px;
+            margin: 0 auto;
+        }
+
+        .textarea-container {
+            margin-top: 10px;
+        }
+
+        .textarea-container textarea {
+            width: 100%;
+            height: 300px;
+            font-size: 1rem;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: none;
+            box-sizing: border-box;
+        }
+
+        .form-label {
+            font-weight: bold;
+        }
+
+        .btn {
+            width: 100%;
+            font-size: 1rem;
+        }
+
+        @media screen and (min-width: 768px) {
+            .btn {
+                width: auto;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 상단 책 정보 섹션 -->
+    <div class="book-info-container">
+        <div class="book-image">
+            <img src="{{ image if image else '../static/imgfile/noimage.png' }}" alt="책 표지">
+        </div>
+        <div class="book-details">
+            <div class="book-title">{{ title }}</div>
+            <div>
+                <div>저자: {{ author }}</div>
+                <div>출판사: {{ publisher }}</div>
+                <div>isbn: {{ isbn }}</div>
+                <input type="hidden" id="isbn" value="{{ isbn }}">
+            </div>
+        </div>
+    </div>
+
+    <!-- 글쓰기 영역 -->
+    <div class="boardwhite10_container">
+        <div>
+            <div style="margin-top: 10px;">
+                <div class="mb-3">
+                    <label for="phrase" class="form-label">인상 깊은 문구</label>
+                    <input type="text" class="form-control" id="phrase" placeholder="인상 깊었던 글귀를 입력하세요(필수)">
+                </div>
+
+                <div class="textarea-container">
+                    <label for="memo" class="form-label">메모</label>
+                    <textarea id="memo" placeholder="(선택)"></textarea>
+                </div>
+
+                <div class="d-flex flex-column-reverse flex-md-row justify-content-between">
+                    <a href="/" class="btn btn-secondary">홈으로</a>
+                    <button type="button" class="btn btn-primary mb-3 mb-md-0" onclick="writeAction()"
+                        style="margin-right:5px;">등록</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function writeAction() {
+            const phrase = document.getElementById('phrase').value; // 인상 깊은 문구
+            const memo = document.getElementById('memo').value; // 메모 내용
+            const user_id = sessionStorage.getItem('user_id'); // 세션에서 사용자 ID 가져오기
+            const isbn = document.getElementById('isbn').value; // 숨겨진 ISBN 값 가져오기
+            const libraryId = sessionStorage.getItem('library_id'); // library_id 값
+    
+            
+
+            // 유효성 검사
+            if (!phrase || phrase.trim().length < 1) {
+                alert('인상 깊은 문구를 작성해주세요!');
+                return;
+            }
+    
+            if (!user_id) {
+                alert("로그인이 필요합니다. 로그인 후 다시 시도하세요.");
+                console.error("User_id is missing. Cannot proceed.");
+                return;
+            }
+        
+            const recordData = {
+                user_id: parseInt(user_id), // user_id 값
+                library_id: parseInt(libraryId), // 고정된 library_id
+                isbn: isbn, // ISBN 값
+                highlight: phrase, // 인상 깊은 문구
+                memo: memo.trim() // 메모 내용
+            };
+    
+            console.log("Record Data to Send:", recordData); // 디버깅용 데이터 확인
+    
+            try {
+                // 독서 기록 등록 요청
+                const response = await fetch('/user_records', {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(recordData)
+                });
+    
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log("독서 기록 등록 성공:", result);
+    
+                    // 독서 기록 등록 후 포인트 업데이트
+                    await updatePoints(user_id, libraryId);
+    
+                    alert('독서 기록이 등록되었습니다.');
+                    window.location.href = `/boardcontent10?record_id=${result.record_id}`;
+                } else {
+                    const errorData = await response.json();
+                    console.error("독서 기록 등록 실패:", errorData);
+                    alert(errorData.error || "독서 기록 등록에 실패했습니다.");
+                }
+            } catch (error) {
+                console.error("Error occurred during fetch:", error);
+                alert('독서 기록 등록 중 문제가 발생했습니다.');
+            }
+        }
+        
+        async function updatePoints(user_id, libraryId) {
+            const pointsData = {
+                user_id: parseInt(user_id), // 사용자 ID
+                library_id: libraryId, // 도서관 ID
+                record_increment: 1 // 독서 기록 횟수 증가
+            };
+    
+            console.log("Points Data to Send:", pointsData); // 포인트 업데이트 요청 데이터 확인
+    
+            try {
+                const response = await fetch('/update_points', {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(pointsData)
+                });
+    
+                if (response.ok) {
+                    const result = await response.json(); 
+                    console.log("포인트 업데이트 성공:", result);
+                } else {
+                    const errorData = await response.json();
+                    console.error("포인트 업데이트 실패:", errorData);
+                    alert(errorData.error || "포인트 업데이트에 실패했습니다.");
+                }
+            } catch (error) {
+                console.error("Error occurred during points update:", error);
+                alert('포인트 업데이트 중 문제가 발생했습니다.');
+            }
+        }
+    </script>
+    
+    
+</body>
+
+</html>

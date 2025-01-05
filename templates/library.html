@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>도서관 인증</title>
+    <link rel="stylesheet" href="/static/css/library.css">
+    <style>
+        /* 모달 숨김 처리 */
+        #library-modal.hidden {
+            display: none;
+        }
+
+        /* 모달 스타일 */
+        #library-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="camera-container">
+        <!-- 카메라가 화면 전체를 촬영하도록 수정 -->
+        <video id="camera" autoplay playsinline style="width: 100%; height: 100%;"></video>
+        <div id="overlay"></div>
+        <div id="library-area"></div>
+    </div>
+
+    <!-- 버튼 영역 -->
+    <div id="button-container">
+        <button id="scan-button">도서관 인증</button>
+        <button id="select-library-button">직접 선택</button>
+    </div>
+    <p id="result">결과: 없음</p>
+
+    <!-- 도서관 선택 모달 -->
+    <div id="library-modal" class="hidden">
+        <div id="modal-content">
+            <h2>도서관 직접 선택</h2>
+            <ul id="library-list">
+                <!-- 도서관 리스트 추가 -->
+            </ul>
+            <button id="close-modal">닫기</button>
+        </div>
+    </div>
+    <script>
+        // 도서관 목록 딕셔너리
+        const libraryDictionary = {
+            1: "국립창원대도서관", 
+            2: "경남대표도서관", 
+            3: "상남도서관", 
+            4: "성산도서관",
+            5: "진해도서관", 
+            6: "진해기적의도서관", 
+            7: "동부도서관", 
+            8: "마산회원도서관", 
+            9: "최윤덕도서관",
+            10: "내서도서관", 
+            11: "고향의봄도서관", 
+            12: "중리초등복합시설도서관", 
+            13: "명곡도서관", 
+            14: "마산합포도서관",
+            15: "창원중앙도서관",
+            16: "의창도서관",
+            17: "창원시립도서관"
+        };
+    
+        // 창원중앙도서관으로 인식할 도서관 이름들
+        const centralLibraryAliases = ["의창도서관", "창원시립도서관"];
+    
+        // 도서관 목록 생성
+        const libraryList = document.getElementById('library-list');
+        for (const [key, library] of Object.entries(libraryDictionary)) {
+            const li = document.createElement('li');
+            li.textContent = library;
+            li.addEventListener('click', () => {
+                let selectedLibrary = library;
+                let selectedId = key;
+    
+                // 의창도서관 및 창원시립도서관은 창원중앙도서관으로 변경
+                if (centralLibraryAliases.includes(library)) {
+                    selectedLibrary = "창원중앙도서관";
+                    selectedId = "15"; // 창원중앙도서관 ID
+                }
+    
+                alert(`선택한 도서관: ${selectedLibrary} (ID: ${selectedId})`);
+                
+                // sessionStorage에 library_id 저장
+                sessionStorage.setItem("library_id", selectedId);
+                
+                modal.classList.add('hidden'); // 모달 숨기기
+                window.location.href = `/barcode`; // 선택 후 이동
+            });
+            libraryList.appendChild(li);
+        }
+    
+        // 모달 열기 및 닫기
+        const modal = document.getElementById('library-modal');
+        const openModalButton = document.getElementById('select-library-button');
+        const closeModalButton = document.getElementById('close-modal');
+    
+        openModalButton.addEventListener('click', () => {
+            modal.classList.remove('hidden'); // 모달 보이기
+        });
+    
+        closeModalButton.addEventListener('click', () => {
+            modal.classList.add('hidden'); // 모달 숨기기
+        });
+    
+        // 도서관 인증 시작 (카메라 작동)
+        async function startLibraryRecognition() {
+            const video = document.getElementById('camera');
+            const resultElement = document.getElementById('result');
+    
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                video.srcObject = stream;
+    
+                document.getElementById('scan-button').addEventListener('click', async () => {
+                    const video = document.getElementById('camera');
+                    const scanArea = document.getElementById('library-area');
+                    const canvas = document.createElement('canvas');
+                    const rect = scanArea.getBoundingClientRect();
+    
+                    // 비디오 크기에 따른 스케일 계산
+                    const scaleX = video.videoWidth / video.offsetWidth;
+                    const scaleY = video.videoHeight / video.offsetHeight;
+                    
+                    // 캡처 좌표 계산
+                    const x = rect.left * scaleX;
+                    const y = rect.top * scaleY;
+                    const width = rect.width * scaleX;
+                    const height = rect.height * scaleY;      
+                    
+                    // 캔버스 크기 설정 및 비디오에서 이미지 캡처
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, x, y, width, height, 0, 0, width, height);
+                    
+                    // 캡처된 이미지 데이터를 서버로 전송
+                    const imageData = canvas.toDataURL('image/jpeg');
+                    const response = await fetch('/scan-library', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image: imageData })
+                    });
+    
+                    const data = await response.json();
+                    if (data.library_name) {
+                        let libraryId = Object.keys(libraryDictionary).find(
+                            key => libraryDictionary[key] === data.library_name
+                        );
+    
+                        // 의창도서관 및 창원시립도서관은 창원중앙도서관으로 변경
+                        if (centralLibraryAliases.includes(data.library_name)) {
+                            libraryId = "15"; // 창원중앙도서관 ID
+                            data.library_name = "창원중앙도서관";
+                        }
+    
+                        resultElement.textContent = `결과: ${data.library_name} (ID: ${libraryId})`;
+    
+                        // sessionStorage에 library_id 저장
+                        sessionStorage.setItem("library_id", libraryId);
+    
+                        stream.getTracks().forEach(track => track.stop());
+                        alert(`${data.library_name} 인증 완료!`);
+                        window.location.href = `/barcode`;
+                    } else {
+                        resultElement.textContent = '도서관 이름을 인식하지 못했습니다.';
+                    }
+                });
+            } catch (error) {
+                console.error('카메라 접근 오류:', error);
+                alert('카메라 권한이 필요합니다.');
+            }
+        }
+    
+        document.addEventListener('DOMContentLoaded', startLibraryRecognition);
+    </script>
+    
+    
+</body>
+</html>

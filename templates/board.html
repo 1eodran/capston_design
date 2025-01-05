@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>독서 기록</title>
+    <link rel="stylesheet" href="../static/css/boardstyle.css" />
+    <link rel="stylesheet" href="../static/css/bootstrap.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+    <style>
+        #libgoimg {
+          width: 75px;
+          height: auto;
+        }
+      </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row align-items-center">
+            <!-- 왼쪽: 제목 -->
+            <div class="col-6">
+                <div onclick="GoToHome()">
+                    <img src="../static/imgfile/libgo.png" id="libgoimg" />
+                </div>
+            </div>
+
+            <!-- 오른쪽: 검색창과 버튼 -->
+            <div class="col-6 d-flex justify-content-end align-items-center">
+                <input type="text" name="text" placeholder="책 제목으로 검색" class="form-control search-input" style="width: 200px" />
+                <button type="submit" class="btn btn-outline-secondary search-btn">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </div>
+        </div>
+
+        <nav class="tab-menu">
+            <button class="tab active" id="myReviewsTab">{{id}} 서평</button>
+        </nav>
+
+        <div class="book-list" id="myReviews">
+            {% for record in records_bookinfos_data| reverse %}
+            <div class="book-item">
+                <div onclick="goToContentPage({{ record.record_id }})">
+                    <img src="{{ record.image if record.image else '../static/imgfile/noimage.png' }}" class="book-img" />
+                </div>
+                <div class="book-info">
+                    <div onclick="goToContentPage({{ record.record_id }})">
+                        <h2>{{ record.title }}</h2>
+                        <p>{{ record.highlight }}</p>
+                    </div>
+                    <div class="book-meta">
+                        <div onclick="updateLikes({{ record.record_id }})">
+                            <i class="fa fa-clover"></i> 공감 <span id="likes-{{ record.record_id }}">{{ record.likes }}</span>
+                        </div>
+                        <a href="{{ record.link }}" target="_blank"><i class="fa fa-book"></i> 책으로</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+       
+
+    <script>
+        async function goToContentPage(recordId) {
+       
+            
+            try {
+                // record_id를 쿼리 파라미터로 포함하여 요청
+                const response = await fetch(`/boardcontent10?record_id=${encodeURIComponent(recordId)}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+        
+                if (response.ok) {
+                    const result = await response.text();
+                    window.location.href = `/boardcontent10?record_id=${encodeURIComponent(recordId)}`;
+                } else {
+                    console.error('Error:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+            }
+        }
+
+
+
+        // 검색 기능
+        function searchReviews() {
+            const searchTerm = document.querySelector("input[name='text']").value.toLowerCase();
+            const activeTab = document.querySelector(".tab.active").id;
+            const listContainer = activeTab === "myReviewsTab" ? myReviews : allReviews;
+            const bookList = activeTab === "myReviewsTab" ? myReviews.children : allReviews.children;
+
+            for (let item of bookList) {
+                const title = item.querySelector("h2")?.textContent.toLowerCase() || "";
+                const highlight = item.querySelector("p")?.textContent.toLowerCase() || "";
+
+                if (title.includes(searchTerm) || highlight.includes(searchTerm)) {
+                    item.style.display = "block";
+                } else {
+                    item.style.display = "none";
+                }
+            }
+        }
+
+        document.querySelector(".search-btn").addEventListener("click", searchReviews);
+        document.querySelector("input[name='text']").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") searchReviews();
+        });
+        
+    </script>
+
+    <script>
+        async function updateLikes(recordId) {
+            try {
+                const userId = sessionStorage.getItem("user_id"); // 세션에서 user_id 가져오기
+                if (!userId) {
+                    alert("로그인이 필요합니다.");
+                    return;
+                }
+
+                const response = await fetch('/update_likes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        record_id: recordId, 
+                        user_id: userId // user_id 추가
+                    }),
+                });
+        
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById(`likes-${recordId}`).textContent = data.likes;
+                    alert("공감이 반영되었습니다!");
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || "공감 반영에 실패했습니다.");
+                }
+            } catch (error) {
+                console.error("서버와의 통신 오류:", error);
+                alert("서버와의 통신 중 문제가 발생했습니다.");
+            }
+        }
+    </script>
+
+   
+    <script>
+        function GoToHome() {
+            window.location.href = "/";
+        }
+    </script>
+    
+</body>
+</html>

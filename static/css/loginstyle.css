@@ -1,0 +1,74 @@
+.login_container {
+  max-width: 50vw; /* 화면 너비의 90%를 차지하도록 설정 */
+  margin: 5vh auto; /* 동적으로 세로 중심 맞춤 */
+  padding: 2vh 5vw; /* 위아래는 2vh, 좌우는 5vw */
+}
+
+h3 {
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 2vh; /* 동적으로 간격 설정 */
+}
+
+.form-control {
+  font-size: 1rem;
+  padding: 10px;
+  margin-bottom: 2vh; /* 동적으로 아래 여백 설정 */
+}
+
+.login_button {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  background-color: #007bff;
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  margin-bottom: 3vh; /* 동적으로 아래 여백 설정 */
+  margin-top: 35vh;
+}
+
+.login_button:hover {
+  background-color: #0056b3;
+}
+
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.flex-links {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2vh; /* 동적으로 간격 설정 */
+}
+
+/* 반응형 스타일 */
+@media (max-width: 576px) {
+  .login_container {
+    max-width: 95vw; /* 작은 화면에서는 더 좁게 설정 */
+    padding: 3vh 3vw; /* 패딩 조정 */
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+
+  .form-control {
+    font-size: 0.9rem;
+  }
+
+  .login_button {
+    font-size: 0.9rem;
+    padding: 8px;
+    margin-top: 250px;
+  }
+
+  a {
+    font-size: 0.9rem;
+  }
+}

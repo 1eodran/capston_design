@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../static/css/homestyle.css" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <title>LIB GO</title>
+  </head>
+  <body>
+    <div id="sidebar">
+      <img src="../static/imgfile/libgo.png" id="libgoimg" style="margin-bottom: 500px" />
+      <div id="div1">
+        <div id="button-container">
+          <button onclick="GotoLogin()">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <b> 로그인</b>
+          </button>
+          <button onclick="GotoJoin()">
+            <i class="fa-solid fa-file-signature"></i><b> 회원가입</b>
+          </button>
+        </div>
+      </div>
+      <div id="div2">
+        <div id="button-container2">
+          <button onclick="deleteToken()" id="logout_button">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <b>로그아웃</b>
+          </button>
+          <button onclick="GotoBarcode()">
+            <i class="fa-solid fa-barcode" style="margin-right: 5px"></i>
+            <b>바코드</b>
+          </button>
+          <button onclick="GotoBoard()">
+            <i class="fa-solid fa-book"></i>
+            <b>독서기록</b>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+    <!-- 카카오 맵 API 불러오기 -->
+    <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=8fa4de0356d694ebcb6e44ec0b2b60e8"></script>
+    <script>
+      document.body.addEventListener(
+        "touchstart",
+        function (e) {
+          if (e.touches.length > 1 || e.targetTouches.length > 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }
+        },
+        { passive: false }
+      );
+    
+      var isMobile = window.matchMedia(
+        "screen and (min-width: 360px) and (min-height: 740px)"
+      ).matches;
+    
+      // 카카오 맵 초기화
+      var mapContainer = document.getElementById("map"),
+        mapOption = {
+          center: new kakao.maps.LatLng(35.2334942, 128.6790201), // 지도 중심좌표
+          level: isMobile ? 10 : 8, // 줌 레벨
+        };
+    
+      var map = new kakao.maps.Map(mapContainer, mapOption); // 지도 생성
+    
+      const markers = [];
+      const overlays = []; // CustomOverlay를 저장할 배열 추가
+    
+      // JSON 데이터를 가져오기
+      async function fetchUpdatedPoints() {
+        try {
+          const response = await fetch("/update_points_json");
+          if (!response.ok) throw new Error("데이터를 불러올 수 없습니다.");
+          const updatedPoints = await response.json();
+          return updatedPoints;
+        } catch (error) {
+          console.error("데이터 가져오기 실패:", error);
+          return [];
+        }
+      }
+    
+      // 변수 값에 따른 아이콘 결정 함수
+      function getIconByVariable(value) {
+        if (value <= 1000) {
+          return { src: "../static/imgfile/lv1.png", size: new kakao.maps.Size(46, 46) };
+        } else if (value <= 3000) {
+          return { src: "../static/imgfile/lv2_new.png", size: new kakao.maps.Size(60, 60) };
+        } else if (value <= 6000) {
+          return { src: "../static/imgfile/lv3.png", size: new kakao.maps.Size(75, 75) };
+        } else if (value <= 10000) {
+          return { src: "../static/imgfile/lv4.png", size: new kakao.maps.Size(80, 80) };
+        } else {
+          return { src: "../static/imgfile/lv5_new.png", size: new kakao.maps.Size(93, 93) };
+        }
+      }
+    
+      // value에 따른 텍스트 옆 이미지 선택 함수
+      function getIconOverlayByValue(value) {
+        let iconSrc = "";
+        if (value <= 1000) {
+          iconSrc = "../static/imgfile/bronze.png"; // bronze 이미지
+        } else if (value <= 3000) {
+          iconSrc = "../static/imgfile/silver.png"; // silver 이미지
+        } else if (value <= 6000) {
+          iconSrc = "../static/imgfile/gold.png"; // gold 이미지
+        } else if (value <= 10000) {
+          iconSrc = "../static/imgfile/platinum.png"; // platinum 이미지
+        } else {
+          iconSrc = "../static/imgfile/diamond.png"; // diamond 이미지
+        }
+        return { src: iconSrc }; // 이미지 경로 반환
+      }
+    
+      // 마커와 오버레이 업데이트
+      function updateMarkers(new_points, defaultImage, showOverlay) {
+        clearMarkers();
+        clearOverlays();
+    
+        new_points.forEach((point) => {
+          const iconData = defaultImage
+            ? { src: defaultImage, size: new kakao.maps.Size(50, 50) }
+            : getIconByVariable(point.variable); // lv1~lv5 아이콘 선택
+    
+          const newMarkerImage = new kakao.maps.MarkerImage(iconData.src, iconData.size);
+    
+          // 마커 생성
+          const marker = new kakao.maps.Marker({
+            position: new kakao.maps.LatLng(point.position.lat, point.position.lng),
+            image: newMarkerImage,
+          });
+    
+          marker.setMap(map);
+          markers.push(marker);
+    
+          // 마커 클릭 이벤트
+          kakao.maps.event.addListener(marker, "click", function () {
+            window.location.href = `/rank?library=${encodeURIComponent(point.content)}`;
+          });
+    
+          // 텍스트와 이미지를 함께 표시하는 CustomOverlay
+          if (showOverlay) {
+            const iconOverlay = getIconOverlayByValue(point.variable);
+    
+            const textOverlay = new kakao.maps.CustomOverlay({
+              position: new kakao.maps.LatLng(point.position.lat, point.position.lng),
+              content: `
+                <div style="
+                  display: inline-flex;
+                  align-items: center;
+                  background-color: white;
+                  padding: 5px 10px;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+                  position: relative;
+                  top: 15px;
+                ">
+                  <img src="${iconOverlay.src}" 
+                      style="width: 18px; height: 18px; margin-right: 5px;" alt="Icon" />
+                  <span style="font-size: 12px; color: blue;">
+                    ${point.content}
+                  </span>
+                </div>
+              `,
+              map: map,
+            });
+            overlays.push(textOverlay);
+          }
+        });
+      }
+    
+      // 마커와 오버레이 초기화
+      function clearMarkers() {
+        markers.forEach((marker) => marker.setMap(null));
+        markers.length = 0;
+      }
+    
+      function clearOverlays() {
+        overlays.forEach((overlay) => overlay.setMap(null));
+        overlays.length = 0;
+      }
+    
+      // 데이터 가져오고 지도 업데이트
+      async function initMap() {
+        const new_points = await fetchUpdatedPoints();
+        updateMarkers(new_points, "../static/imgfile/book1.png", false); // 기본 텍스트 숨긴 상태
+    
+        // 줌 레벨 변경 이벤트
+        kakao.maps.event.addListener(map, "zoom_changed", function () {
+          const currentZoomLevel = map.getLevel();
+    
+          if (currentZoomLevel > 8) {
+            updateMarkers(new_points, "../static/imgfile/book1.png", false);
+          } else if (7 < currentZoomLevel && currentZoomLevel <= 8) {
+            updateMarkers(new_points, null, false);
+          } else if (currentZoomLevel <= 7) {
+            updateMarkers(new_points, null, true);
+          }
+        });
+      }
+    
+      initMap();
+    </script>
+    
+    <script>
+      let token = sessionStorage.getItem("token");
+      if (token === null) {
+        div1.style.display = "block"; // 로그아웃 상태
+        div2.style.display = "none";
+      } else {
+        div1.style.display = "none"; // 로그인 상태
+        div2.style.display = "block";
+      }
+
+      function deleteToken() {
+        if (confirm("로그아웃 할까요?")) {
+          sessionStorage.removeItem("token"); // 토큰 제거
+          window.location.href = "/"; // 홈으로 이동
+        }
+      }
+
+      function GotoLogin() {
+        window.location.href = "/login"; // 로그인 페이지로 이동
+      }
+
+      function GotoJoin() {
+        window.location.href = "/join"; // 회원가입 페이지로 이동
+      }
+
+      function GotoBarcode() {
+        window.location.href = "/library"; // 바코드 페이지로 이동
+      }
+
+      // GoToRank 함수
+      function GoToRank(libraryName) {
+        if (libraryName) {
+          // 예: 랭킹 페이지로 이동
+          window.location.href = `/rank?library=${encodeURIComponent(libraryName)}`;
+        } else {
+          alert("도서관 이름이 전달되지 않았습니다.");
+        }
+      }
+
+      function GotoBoard() {
+        const userId = sessionStorage.getItem('user_id'); // 세션에서 user_id 가져오기
+        if (userId) {
+          window.location.href = `/board?user_id=${userId}`; // user_id를 URL 매개변수로 추가
+        } else {
+          alert("로그인이 필요합니다.");
+        }
+      }
+    </script>
+  </body>
+</html>

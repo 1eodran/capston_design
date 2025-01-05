@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ library_name }} 순위표</title>
+
+    <link rel="stylesheet" href="../static/css/boardstyle.css" />
+    <link rel="stylesheet" href="../static/css/bootstrap.css" />
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      rel="stylesheet"
+    />
+
+</head>
+<body>
+    <header style="margin-top: 30px;">
+        <!-- 도서관 이름 중앙 배치 -->
+        <div class="text-center mb-2">
+            <h1 id="libraryName" class="text-center" onclick="goToHome()">
+                Lv{{ level }}. {{ library_name }}
+            </h1>
+
+        <div class="text-center mb-2">
+            <!-- 전체 Progress Bar -->
+            <div class="progress-bar" role="progressbar" aria-valuenow="{{ total_points }}" aria-valuemin="0" aria-valuemax="{{ max_points_in_level }}">
+                <!-- 내부 채워지는 부분 -->
+                <div class="bg-info" style="width: {{ (total_points / max_points_in_level) * 100 }}%;"></div>
+                <!-- 텍스트 -->
+                <span>{{ total_points }} / {{ max_points_in_level }} 포인트</span>
+            </div>
+        </div>
+            
+
+    <!-- 검색창과 버튼 오른쪽 배치 -->
+    <div style="margin-top: 15px;">
+        <div class="d-flex justify-content-end align-items-center" style="margin-right: 15px;">
+        <input
+            type="text"
+            name="text"
+            placeholder=" id ／ 책 제목으로 검색"
+            class="form-control search-input"
+            style="width: 200px; margin-right: 10px;"
+        />
+        <button type="submit" class="btn btn-outline-secondary search-btn">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+        </div>
+    </div>
+  </header>
+  
+    <!-- Tab Navigation -->
+    <nav class="tab-menu">
+        <a id="RankListTab" class="tab active">순위표</a>
+        <a id="LibReviewsTab" class="tab">모든 서평</a>
+    </nav>
+
+    <div class="container">
+        <!-- Rank List Section -->
+        <div id="RankList">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th><i class="fa-solid fa-ranking-star"></i> 순위</th>
+                        <th><i class="fa-solid fa-tag"></i> 아이디</th>
+                        <th><img src="../static/imgfile/level.png" alt="level" style="height: 25px; width: 25px"> 포인트</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingTbody">
+                  {% for record in rank_list %}
+                    <tr>
+                        <td>{{ record.rank }}</td>
+                        <td onclick="goToBoard({{ record.user_id }})">{{ record.id }}</td>
+                        <td>{{ record.points }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Library Reviews Section -->
+        <div class="book-list" id="LibReviews" style="display: none">
+          <!-- 모든 서평 리스트 -->
+          {% for record in all_user_records_bookinfos_data | reverse %}
+          <div class="book-item">
+              <div onclick="goToContentPage({{ record.record_id }})">
+                  <img src="{{ record.image if record.image else '../static/imgfile/noimage.png' }}" class="book-img" />
+              </div>
+              <div class="book-info">
+                  <span onclick="goToContentPage({{ record.record_id }})">
+                      <h2>{{ record.title }}</h2>
+                      <p>id: {{ record.id }}</p>
+                      <p>{{ record.highlight }}</p>
+                  </span>
+                  <div class="book-meta">
+                      <div onclick="updateLikes({{ record.record_id }})">
+                          <i class="fa fa-clover"></i> 공감 <span id="likes-{{ record.record_id }}">{{ record.likes }}</span>
+                      </div>
+                      <a href="{{ record.link }}" target="_blank"><i class="fa fa-book"></i> 책으로</a>
+                  </div>
+              </div>
+          </div>
+          <div>{{ record.username }}</div>
+          {% endfor %}
+
+        <!-- Pagination -->
+        <div class="row g-3 justify-content-center">
+            <div class="col-auto">
+                <nav aria-label="Page navigation example">
+                    <ul id="pagination-demo" class="pagination pagination-sm"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twbs-pagination/1.4.2/jquery.twbsPagination.min.js"></script>
+    <script>
+        function goToBoard(userId) {
+            if (userId) {
+                window.location.href = `/board?user_id=${userId}`; // user_id를 URL 매개변수로 추가
+            } else {
+            alert("로그인이 필요합니다.");
+            }
+        }
+    </script>
+    <script>
+        function goToHome() {
+            window.location.href = "/";
+        }
+    </script>   
+    <script>
+      // Tab Switching Logic
+      const rankListTab = document.getElementById("RankListTab");
+      const libReviewsTab = document.getElementById("LibReviewsTab");
+      const rankList = document.getElementById("RankList");
+      const libReviews = document.getElementById("LibReviews");
+
+      rankListTab.addEventListener("click", () => {
+        rankListTab.classList.add("active");
+        libReviewsTab.classList.remove("active");
+        rankList.style.display = "block";
+        libReviews.style.display = "none";
+      });
+
+      libReviewsTab.addEventListener("click", () => {
+        libReviewsTab.classList.add("active");
+        rankListTab.classList.remove("active");
+        rankList.style.display = "none";
+        libReviews.style.display = "block";
+      });
+    </script>
+    <script>
+        // 검색 기능
+        function searchContent() {
+            const searchInput = document.querySelector("input[name='text']").value.toLowerCase();
+            const activeTab = document.querySelector(".tab.active").id;
+    
+            if (activeTab === "RankListTab") {
+                // 순위표에서 검색
+                const rankRows = document.querySelectorAll("#RankList tbody tr");
+                rankRows.forEach(row => {
+                    const userId = row.cells[1].textContent.toLowerCase();
+                    if (userId.includes(searchInput)) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            } else if (activeTab === "LibReviewsTab") {
+                // 모든 서평에서 검색
+                const bookItems = document.querySelectorAll("#LibReviews .book-item");
+                bookItems.forEach(item => {
+                    const title = item.querySelector("h2").textContent.toLowerCase();
+                    const highlight = item.querySelector("p").textContent.toLowerCase();
+                    if (title.includes(searchInput) || highlight.includes(searchInput)) {
+                        item.style.display = "flex";
+                    } else {
+                        item.style.display = "none";
+                    }
+                });
+            }
+        }
+    
+        // 검색 버튼 클릭 이벤트 추가
+        document.querySelector(".search-btn").addEventListener("click", searchContent);
+    
+        // 엔터키로 검색 실행
+        document.querySelector("input[name='text']").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") searchContent();
+        });
+    </script>
+
+    <script>
+        </script>
+    <script>
+      async function goToContentPage(recordId) {
+     
+          
+          try {
+              // record_id를 쿼리 파라미터로 포함하여 요청
+              const response = await fetch(`/boardcontent11?record_id=${encodeURIComponent(recordId)}`, {
+                  method: 'GET',
+                  headers: { 'Content-Type': 'application/json' },
+              });
+      
+              if (response.ok) {
+                  const result = await response.text();
+                  window.location.href = `/boardcontent11?record_id=${encodeURIComponent(recordId)}`;
+              } else {
+                  console.error('Error:', response.statusText);
+              }
+          } catch (error) {
+              console.error('Fetch error:', error);
+          }
+      }
+
+  </script>
+
+  <script>
+      async function updateLikes(recordId) {
+          try {
+              const userId = sessionStorage.getItem("user_id"); // 세션에서 user_id 가져오기
+              if (!userId) {
+                  alert("로그인이 필요합니다.");
+                  return;
+              }
+
+              const response = await fetch('/update_likes', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ 
+                      record_id: recordId, 
+                      user_id: userId // user_id 추가
+                  }),
+              });
+      
+              if (response.ok) {
+                  const data = await response.json();
+                  document.getElementById(`likes-${recordId}`).textContent = data.likes;
+                  alert("공감이 반영되었습니다!");
+              } else {
+                  const errorData = await response.json();
+                  alert(errorData.error || "공감 반영에 실패했습니다.");
+              }
+          } catch (error) {
+              console.error("서버와의 통신 오류:", error);
+              alert("서버와의 통신 중 문제가 발생했습니다.");
+          }
+      }
+
+  </script>
+
+
+<script>
+    async function updatePoints(userId, libraryId, visitIncrement, recordIncrement, likeIncrement) {
+        try {
+            const response = await fetch('/update_points', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    library_id: libraryId,
+                    visit_increment: visitIncrement,
+                    record_increment: recordIncrement,
+                    like_increment: likeIncrement
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Progress Bar 업데이트
+                document.querySelector('.progress-bar').style.width = `${data.progress_percent}%`;
+                document.querySelector('.progress-bar').innerText = `${data.total_points} 포인트`;
+            } else {
+                console.error('포인트 업데이트 실패:', response.statusText);
+            }
+        } catch (error) {
+            console.error('서버 통신 오류:', error);
+        }
+    }
+
+</script>
+
+
+
+
+</body>
+</html>

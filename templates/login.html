@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인</title>
+  <link href="../static/css/bootstrap.css" rel="stylesheet">
+  <link href="../static/css/loginstyle.css" rel="stylesheet">
+
+</head>
+
+<body>
+  <div class="login_container">
+    <div>
+      <h3><b>로그인</b></h3>
+      <hr>
+      <div>
+        <label for="id" class="col-form-label" style="display: block;"><b>아이디</b></label>
+        <input type="text" id="id" class="form-control" onkeydown="handleEnter(event)" autofocus>
+      </div>
+      <div>
+        <label for="pw" class="col-form-label" style="display: block;"><b>패스워드</b></label>
+        <input type="password" id="pw" class="form-control" onkeydown="handleEnter(event)">
+        <div class="fixed-footer">
+          <button class="login_button" onclick="loginAction()">LOGIN</button>
+          <div class="row justify-content-between">  
+            <div class="col-auto">
+              <a href="/join">회원가입</a>
+            </div>
+            <div class="col-auto">
+              <a href="/">HOME</a>
+            </div>
+          </div>
+        </div>
+        
+    </div>
+  </div>
+
+  <script>
+    /* 로그인 확인 */
+    const validUsername = "testuser";
+    const validPassword = "testpassword";
+
+    let token = sessionStorage.getItem("token");
+    console.log(token);
+
+    function checkLoginWrite() {
+      if (token === null) {
+        if (confirm("독서기록은 가입 후 이용 가능합니다. \n로그인 페이지로 이동하시겠습니까?")) {
+          window.location.href = "/login";
+        }
+        return false;
+      } else {
+        window.location.href = "boardwhite10.html";
+      }
+    }
+
+    function handleEnter(event) {
+      if (event.key === "Enter") {
+        loginAction();
+      }
+    }
+
+async function loginAction() {
+      const apiUrl = "/login_action";
+      const id = document.getElementById("id").value;
+      const pw = document.getElementById("pw").value;
+
+      if (!id || !pw) {
+        alert("아이디와 비밀번호를 모두 입력하세요.");
+        return;
+      }
+
+      const body = { id, password: pw };
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          alert(data.message);
+          sessionStorage.setItem("token", data.token); // 세션에 토큰 저장
+          sessionStorage.setItem("id", data.id); // 세션에 id 저장
+          sessionStorage.setItem("user_id", data.user_id); // 세션에 user_id 저장
+          window.location.href = "/";
+        } else {
+          const errorData = await response.json();
+          alert(errorData.error || "로그인에 실패했습니다.");
+        }
+      } catch (error) {
+        alert(error);
+      }
+    }
+  </script>
+</body>
+
+</html>

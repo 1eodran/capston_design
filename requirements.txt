@@ -1,0 +1,10 @@
+Flask==2.0.1
+Flask-SQLAlchemy==2.5.1
+flask-cors==3.1.1
+Pillow==8.4.0
+opencv-python==4.5.4.60
+pyzbar==0.1.8
+pytesseract==0.3.8
+requests==2.26.0
+sqlalchemy==1.4.25
+pymysql==1.0.2

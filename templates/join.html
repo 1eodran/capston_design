@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+
+    <link href="../static/css/bootstrap.css" rel="stylesheet">
+    <style>
+        .login_container {
+            max-width: 480px;
+            margin: 5vh auto;
+            padding: 15px;
+        }
+
+
+        h3 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .form-control {
+            font-size: 1rem;
+            padding: 8px;
+        }
+
+        .join_button {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .join_button:hover {
+            background-color: #0056b3;
+        }
+
+        .row {
+            margin-bottom: 15px;
+        }
+
+        .label-column {
+            width: 120px;
+        }
+
+        .input-column {
+            flex-grow: 1;
+        }
+
+        .button-column {
+            width: 90px;
+            text-align: right;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login_container">
+        <div>
+            <h3><b>회원가입</b></h3>
+
+            <div class="row d-flex align-items-center">
+                <div class="col-auto label-column">
+                    <label for="username" class="col-form-label"><b>이름</b></label>
+                </div>
+                <div class="col input-column">
+                    <input type="text" id="username" class="form-control" placeholder="이름입력" autofocus/>
+                </div>
+
+            </div>
+
+            <div class="row d-flex align-items-center">
+                <div class="col-auto label-column">
+                    <label for="id" class="col-form-label"><b>아이디</b></label>
+                </div>
+                <div class="col input-column">
+                    <input type="text" id="id" class="form-control" placeholder="4자 이상" />
+                </div>
+                <div class="col-auto button-column">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="checkDuplicate()">중복<br>확인</button>
+                </div>
+            </div>
+
+            <div class="row d-flex align-items-center">
+                <div class="col-auto label-column">
+                    <label for="password" class="col-form-label"><b>패스워드</b></label>
+                </div>
+                <div class="col input-column">
+                    <input type="password" id="password" class="form-control" placeholder="4자이상" />
+                </div>
+            </div>
+
+            <div class="row d-flex align-items-center">
+                <div class="col-auto label-column">
+                    <label for="age" class="col-form-label"><b>나이</b></label>
+                </div>
+                <div class="col input-column">
+                    <input type="number" id="age" class="form-control" />
+                </div>
+            </div>
+
+            <div class="row d-flex align-items-center">
+                <div class="col-auto label-column">
+                    <label for="email1" class="col-form-label"><b>이메일</b></label>
+                </div>
+                <div class="col input-column">
+                    <input type="text" id="email1" class="form-control" />
+                </div>
+
+                <div class="col">
+                    <select id="email2" class="form-control">
+                        <option value>이메일 선택</option>
+                        <option value="naver.com">@naver.com</option>
+                        <option value="gmail.com">@gmail.com</option>
+                        <option value="daum.net">@daum.net</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="join_button" onclick="joinAction()">회원가입</button>
+            <div class="text-center mt-3">
+                <a href="/" style="color: #007bff; text-decoration: none;">HOME</a>
+            </div>
+        </div>
+    </div>
+
+   
+    <script>
+        async function joinAction() {
+            const apiUrl = "/join_done";
+            const username = document.getElementById("username").value;
+            const id = document.getElementById("id").value;
+            const password = document.getElementById("password").value;
+            const age = document.getElementById("age").value;
+            const email1 = document.getElementById("email1").value;
+            const email2 = document.getElementById("email2").value;
+
+            if (!username || !id || !password || !age || !email1 || !email2) {
+                alert("모든 필드를 올바르게 입력해주세요.");
+                return;
+            }
+
+            const email = `${email1}@${email2}`;
+            const body = {
+                username,
+                id,
+                password,
+                age: parseInt(age),
+                email,
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(body),
+                });
+
+                if (response.ok) {
+                    alert("회원가입이 완료되었습니다.");
+                    window.location.href = "/";
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || "회원가입에 실패했습니다.");
+                }
+            } catch (error) {
+                alert("회원가입 요청 중 문제가 발생했습니다.");
+            }
+        }
+
+        async function checkDuplicate() {
+            const id = document.getElementById("id").value;
+
+            if (!id) {
+                alert("아이디를 입력해주세요.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/check_id_duplicate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.is_duplicate) {
+                        alert(data.message); // "이미 사용 중인 아이디입니다."
+                    } else {
+                        alert(data.message); // "사용 가능한 아이디입니다."
+                    }
+                } else {
+                    alert(data.error || "중복 확인 중 오류가 발생했습니다.");
+                }
+            } catch (error) {
+                console.error("중복 확인 요청 오류:", error);
+                alert("서버와의 통신 중 문제가 발생했습니다.");
+            }
+        }
+
+    </script>
+</body>
+
+</html>

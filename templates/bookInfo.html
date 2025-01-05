@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>책 정보</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .book-info {
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 90%;
+            margin: 20px auto;
+            background-color: #f9f9f9;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto 15px auto;
+        }
+        h1 {
+            font-size: 1.5em;
+            text-align: center;
+        }
+        p {
+            font-size: 1em;
+            margin: 10px 0;
+        }
+        a {
+            display: block;
+            text-align: left;
+            margin: 10px 0;
+            text-decoration: none;
+            color: #007BFF;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .button {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    {% if book_info %}
+        <div class="book-info">
+            <img src="{{ book_info['image'] }}" alt="책 표지">
+            <h1>{{ book_info['title'] }}</h1>
+            <p><strong>저자:</strong> {{ book_info['author'] }}</p>
+            <p><strong>출판사:</strong> {{ book_info['publisher'] }}</p>
+            <p><a href="{{ book_info['link'] }}" target="_blank">네이버 책 링크</a></p>
+            <p><strong>ISBN:</strong> {{ book_info['isbn'] }}</p>
+            <div>
+                <!-- 독서 기록 폼 -->
+                <form action="/contentwrite" method="post">
+                    <input type="hidden" name="title" value="{{ book_info['title'] }}">
+                    <input type="hidden" name="author" value="{{ book_info['author'] }}">
+                    <input type="hidden" name="publisher" value="{{ book_info['publisher'] }}">
+                    <input type="hidden" name="image" value="{{ book_info['image'] }}">
+                    <input type="hidden" name="link" value="{{ book_info['link'] }}">
+                    <input type="hidden" name="isbn" value="{{ book_info['isbn'] }}">
+                    <button class="button" type="submit">독서 기록</button>
+                </form>
+            </div>
+        </div>
+    {% elif error %}
+        <h2 style="text-align: center;">{{ error }}</h2>
+    {% endif %}
+</body>
+</html>

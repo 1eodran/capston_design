@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 상세보기</title>
+
+    <link href="../static/css/bootstrap.css" rel="stylesheet" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .book-info-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 15px;
+        }
+
+        .book-image {
+            flex: 1 1 30%;
+        }
+
+        .book-image img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .book-details {
+            flex: 1 1 65%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .book-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .boardwhite10_container {
+            width: 100%;
+            max-width: 800px;
+            padding: 15px;
+            margin: 0 auto;
+        }
+
+        .content-container {
+            margin-top: 20px;
+        }
+
+        .content-container p {
+            font-size: 1rem;
+            line-height: 1.5;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+
+        @media screen and (min-width: 768px) {
+            .btn {
+                width: auto;
+                font-size: 1rem;
+            }
+        }
+        <style>
+            /* 네비게이션 바 스타일 */
+            .nav-bar {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+                background-color: #f8f9fa; /* 흰색 계열 배경 */
+                display: flex;
+                justify-content: space-around; /* 버튼 간 간격 균등 */
+                align-items: center;
+                padding: 10px 0;
+                border-top: 1px solid #ddd; /* 상단 테두리 */
+                box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.1); /* 약간의 그림자 */
+            }
+        
+            /* 버튼 스타일 */
+            .nav-button {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+                color: white; /* 흰색 텍스트 */
+                text-decoration: none; /* 밑줄 제거 */
+                background-color: #007bff; /* 푸른 배경 */
+                border: 1px solid #007bff; /* 푸른 테두리 */
+                border-radius: 5px; /* 둥근 모서리 */
+                transition: all 0.3s ease; /* 호버 효과 */
+                text-align: center;
+            }
+        
+            .nav-button:hover {
+                background-color:white;  /* 호버 시 흰색 배경 */
+                color: #007bff; /* 텍스트 파란색 */
+                cursor: pointer;
+            }
+        
+            /* 작은 화면에서 버튼 크기 조정 */
+            @media (max-width: 768px) {
+                .nav-button {
+                    font-size: 0.8rem; /* 작은 글자 크기 */
+                    padding: 8px 16px; /* 좁은 여백 */
+                }
+            }
+
+    </style>
+</head>
+
+<body>
+    <!-- 상단 책 정보 섹션 -->
+    <div class="book-info-container">
+        <div class="book-image">
+            <img src="{{ record.image if record.image else '../static/imgfile/noimage.png' }}" alt="책 표지">
+        </div>
+        <div class="book-details">
+            <div class="book-title">{{ record.title }}</div>
+            <div>
+                <div>저자: {{ record.author }}</div>
+                <div>출판사: {{ record.publisher }}</div>
+                <div>ISBN: {{ record.isbn }}</div>
+                <div>작성일: {{ record.visit_date }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 글 내용 -->
+    <div class="boardwhite10_container">
+        <input type="hidden" id="record_id" value="{{ record.record_id }}">
+        <div>
+            <div class="content-container">
+                <h4>인상 깊은 문구</h4>
+                <p>{{ record.highlight }}</p>
+
+                <h4>메모</h4>
+                <p>{{ record.memo }}</p>
+            </div>
+            <div class="nav-bar">
+                <a href="/" class="nav-button">홈으로</a>
+                <a href="#" class="nav-button" onclick="goToBoardPage()" >목록</a>
+                <a href="#" class="nav-button" onclick="goToUpdatePage()">수정</a>
+                <a href="#" class="nav-button" onclick="deleteRecord()">삭제</a>
+                
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        function goToBoardPage() {
+            const userId = sessionStorage.getItem("user_id");
+
+            if (userId) {
+                window.location.href = `/board?user_id=${userId}`; // user_id를 URL 매개변수로 추가
+            } else {
+                 alert("로그인이 필요합니다.");
+            }
+        }
+
+        // 수정 페이지로 이동
+        function goToUpdatePage() {
+            recordId = document.getElementById("record_id").value;
+            // boardupdate10.html로 이동하며 record_id를 URL에 전달
+            window.location.href = `/boardupdate10?record_id=${encodeURIComponent(recordId)}`;
+        }
+      </script>
+      <script>
+        async function deleteRecord() {
+            const recordId = document.getElementById("record_id").value;
+    
+            if (!confirm("정말 삭제하시겠습니까?")) {
+                return;
+            }
+    
+            try {
+                const response = await fetch(`/delete_record/${recordId}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+    
+                if (response.ok) {
+                    alert("삭제가 완료되었습니다.");
+                    const userId = sessionStorage.getItem("user_id");
+                    window.location.href = `/board?user_id=${userId}`; // user_id를 URL 매개변수로 추가
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || "삭제에 실패했습니다.");
+                }
+            } catch (error) {
+                console.error("서버와 통신 중 오류가 발생했습니다:", error);
+                alert("서버와 통신 중 문제가 발생했습니다.");
+            }
+        }
+    </script>
+    
+      
+</body>
+
+</html>

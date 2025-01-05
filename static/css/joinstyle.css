@@ -1,0 +1,76 @@
+.join_button {
+  display: block;
+  width: 300px;
+  padding: 0.5rem;
+  background: #6c757d;
+  color: #fff;
+  font-size: 1rem;
+  border: none;
+  margin-bottom: 10px;
+}
+.boardwhite10_container {
+  width: 900px;
+  padding: 20px;
+  margin: 0 auto 0 auto;
+  border: 1px solid #b1acf1;
+}
+
+.review_container {
+  width: 800px;
+  padding: 20px;
+  margin: 0 auto 0 auto;
+}
+
+.grid_container {
+  width: 600px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-auto-rows: minmax(100px, 100px);
+  margin: 0px auto;
+}
+
+.main_container {
+  width: 1200px;
+  margin: 0px auto 0px auto;
+  padding-top: 15px;
+}
+
+.login_container {
+  width: 750px;
+  margin: 0px auto 0px auto;
+  padding-top: 15px;
+}
+
+.login_box {
+  width: 460px;
+  margin: 120px auto;
+  padding-left: 30px;
+  padding-right: 30px;
+}
+.join_box {
+  width: 600px;
+  margin: 60px auto;
+  padding-left: 30px;
+  padding-right: 30px;
+}
+
+a {
+  text-decoration: none;
+  color: black;
+}
+
+.lbl {
+  display: inline-block;
+}
+
+.login_button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  background: #6c757d;
+  color: #fff;
+  font-size: 1rem;
+  border: none;
+  margin-bottom: 10px;
+}
