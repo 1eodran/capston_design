@@ -14,6 +14,8 @@ import difflib
 import re
 from datetime import datetime
 import os
+import requests
+from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 CORS(app)
@@ -725,7 +727,7 @@ def update_likes():
         # 결과 데이터 파싱
         response_data = response.get_json()
         return jsonify({
-            "message": "공감이 반영되었습니다.",
+            "message": "공감이 반영되었습니다.(상대 사용자 +3points)",
             "likes": record.likes,
             "total_points": response_data.get("total_points", 0)
         }), 200
@@ -868,6 +870,43 @@ def update_points_json():
     # JSON 반환
     return jsonify(updated_points)
 
+#### 도서관사업소 자료검색 연동
+BASE_URL = "https://lib.changwon.go.kr/cl/search/data.html"
+
+# 책 검색 API
+@app.route('/search-books', methods=['GET', 'POST'])
+def search_books():
+    if request.method == 'POST':
+        data = request.get_json()
+        keyword = data.get('keyword', '').strip()  # 검색 키워드
+        library = data.get('library', '').strip()  # 선택한 도서관
+
+        if not keyword or not library:
+            return jsonify({"error": "검색어와 도서관을 입력해주세요."}), 400
+
+        try:
+            # Changwon 도서관 검색 API 호출
+            params = {"kwd": keyword, "lib": library}
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            }
+            response = requests.get(BASE_URL, params=params, headers=headers)
+
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, "html.parser")
+                search_results = soup.select_one(".resultList")  # 검색 결과 HTML
+                if search_results:
+                    return jsonify({"results_html": str(search_results)}), 200
+                else:
+                    return jsonify({"error": "검색 결과가 없습니다."}), 404
+            else:
+                return jsonify({"error": "도서관 서버에 문제가 있습니다."}), 500
+        except Exception as e:
+            return jsonify({"error": f"서버 오류: {str(e)}"}), 500
+
+    # 검색 페이지 렌더링 (GET 요청)
+    return render_template('search_books.html')
+
 
 #### 화면 라우트
 # HTML 렌더링
@@ -903,6 +942,11 @@ def library_page():
 @app.route('/insertisbn')
 def insertisbn():
     return render_template('insertisbn.html')
+
+@app.route('/search-books')
+def search_books_page():
+    return render_template('search_books.html')
+
 
 
 if __name__ == '__main__':

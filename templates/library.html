@@ -174,7 +174,7 @@
                         sessionStorage.setItem("library_id", libraryId);
     
                         stream.getTracks().forEach(track => track.stop());
-                        alert(`${data.library_name} 인증 완료!`);
+                        alert(`${data.library_name} 인증 완료! (+100points)`);
                         window.location.href = `/barcode`;
                     } else {
                         resultElement.textContent = '도서관 이름을 인식하지 못했습니다.';

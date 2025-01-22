@@ -178,7 +178,7 @@
                     // 독서 기록 등록 후 포인트 업데이트
                     await updatePoints(user_id, libraryId);
     
-                    alert('독서 기록이 등록되었습니다.');
+                    alert('독서 기록이 등록되었습니다. (+10points)');
                     window.location.href = `/boardcontent10?record_id=${result.record_id}`;
                 } else {
                     const errorData = await response.json();
