@@ -34,7 +34,8 @@
         </div>
 
         <nav class="tab-menu">
-            <button class="tab active" id="myReviewsTab">{{id}} 서평</button>
+            <button class="tab active" id="myReviewsTab">{{id}}의 독서기록</button>
+            <button class="tab" id="barcodeTab" onclick="goToBarcodePage()">독서기록 시작</button>
         </nav>
 
         <div class="book-list" id="myReviews">
@@ -61,6 +62,17 @@
        
 
     <script>
+        // "내 서평" 탭 클릭 시
+        function showMyReviews() {
+            document.getElementById('myReviewsTab').classList.add('active');
+            document.getElementById('barcodeTab').classList.remove('active');
+        }
+
+        // "바코드" 탭 클릭 시
+        function goToBarcodePage() {
+            window.location.href = "/library";
+        }
+            
         async function goToContentPage(recordId) {
        
             

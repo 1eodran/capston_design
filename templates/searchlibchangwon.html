@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>창원시 도서관 사업소</title>
+    <link rel="stylesheet" href="../static/css/boardstyle.css">
+    <link rel="stylesheet" href="../static/css/bootstrap.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .error {
+            color: red;
+        }
+        .book {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .book img {
+            max-width: 100px;
+            margin-right: 20px;
+        }
+        .search-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-title i {
+            font-size: 24px;
+            color: #007bff;
+        }
+        .tab-menu {
+            margin-top: 10px;
+        }
+        .search-form {
+            margin-top: 15px;
+            display: none; /* 기본으로 검색 기능 숨김 */
+        }
+        .book-list {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 상단 제목 -->
+        <header>
+            <div class="search-title" onclick="goToHome()" style="cursor: pointer;">
+                <img src="../static/imgfile/changwonlib.png" alt="Library Icon">
+                <h1>창원시 도서관 사업소</h1>
+            </div>
+        </header>
+
+        <!-- Tab 메뉴 -->
+        <nav class="tab-menu">
+            <button class="tab active" id="searchTab" onclick="showSearchTab()">책 검색</button>
+            <button class="tab" id="orderTab" onclick="showOrderTab()">주문 내역</button>
+        </nav>
+
+        <!-- 검색창 (책 검색 탭 전용) -->
+        <form method="POST" action="/searchlibchangwon" class="search-form" id="searchForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="search_query">검색어:</label>
+                    <input type="text" id="search_query" name="search_query" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="selected_library">도서관 선택:</label>
+                    <select id="selected_library" name="selected_library" class="form-control" required>
+                        <option value="MA">창원중앙도서관</option>
+                        <option value="MF">마산내서도서관</option>
+                        <option value="MJ">진해도서관</option>
+                        <option value="MK">동부도서관</option>
+                        <option value="MC">고향의봄도서관</option>
+                        <option value="MM">명곡도서관</option>
+                        <option value="MB">성산도서관</option>
+                        <option value="MD">상남도서관</option>
+                        <option value="MG">마산합포도서관</option>
+                        <option value="ME">마산회원도서관</option>
+                        <option value="MH">마산중리초등복합시설도서관</option>
+                        <option value="MN">진해기적의도서관</option>
+                        <option value="MO">최윤덕도서관</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">검색</button>
+        </form>
+
+        <!-- 검색 결과 -->
+        <div id="searchResults" class="book-list">
+            {% if error %}
+                <p class="error">{{ error }}</p>
+            {% endif %}
+            {% if books %}
+                <h2>검색 결과:</h2>
+                <div>
+                    {% for book in books %}
+                    <div class="book">
+                        <input type="checkbox" class="checkbox" name="selected_books" value="{{ book.id }}" />
+                        <img src="{{ book.image_url if book.image_url else '../static/imgfile/noimage.png' }}" alt="{{ book.title }}">
+                        <div>
+                            <p><strong>제목:</strong> {{ book.title }}</p>
+                            <p><strong>저자:</strong> {{ book.author }}</p>
+                            <p><strong>소장기관:</strong> {{ book.library }}</p>
+                            <p><strong>대출 상태:</strong> {{ book.status }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 주문 내역 -->
+        <div id="orderDetails" style="display: none;">
+            <h2>주문 내역:</h2>
+            <div>
+                {% for order in orders %}
+                <div class="book">
+                    <img src="{{ order.image_url if order.image_url else '../static/imgfile/noimage.png' }}" alt="{{ order.title }}">
+                    <div>
+                        <p><strong>제목:</strong> {{ order.title }}</p>
+                        <p><strong>저자:</strong> {{ order.author }}</p>
+                        <p><strong>소장기관:</strong> {{ order.library }}</p>
+                        <p><strong>대출 상태:</strong> {{ order.status }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 주문 버튼 -->
+        <div class="text-center mt-4">
+        <form id="selectedBooksForm" method="POST" action="/payment">
+            <input type="hidden" name="selected_books" id="selectedBooksInput">
+            <button type="submit" class="btn btn-success mt-3">주문하기</button>
+        </form>
+        </div>
+    </div>
+
+    <script>
+        // '주문하기' 버튼 클릭 시 선택한 책 정보를 hidden input에 추가
+        document.getElementById('selectedBooksForm').addEventListener('submit', function (event) {
+            const selectedBooks = Array.from(document.querySelectorAll('input[name="selected_books"]:checked'))
+                .map((checkbox) => checkbox.value);
+
+            if (selectedBooks.length === 0) {
+                event.preventDefault();
+                alert("주문할 책을 선택해주세요.");
+                return;
+            }
+
+            document.getElementById('selectedBooksInput').value = JSON.stringify(selectedBooks);
+        });
+        
+        // Tab 전환
+        function showSearchTab() {
+            document.getElementById('searchTab').classList.add('active');
+            document.getElementById('orderTab').classList.remove('active');
+            document.getElementById('searchResults').style.display = 'block';
+            document.getElementById('orderDetails').style.display = 'none';
+            document.getElementById('searchForm').style.display = 'block'; // 검색창 표시
+        }
+
+        function showOrderTab() {
+            document.getElementById('orderTab').classList.add('active');
+            document.getElementById('searchTab').classList.remove('active');
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('orderDetails').style.display = 'block';
+            document.getElementById('searchForm').style.display = 'none'; // 검색창 숨김
+        }
+
+        // 주문 내역 저장
+        function submitOrder() {
+            const selectedBooks = Array.from(document.querySelectorAll('input[name="selected_books"]:checked'))
+                .map((checkbox) => checkbox.value);
+            
+            if (selectedBooks.length === 0) {
+                alert("주문할 책을 선택해주세요.");
+                return;
+            }
+
+            fetch('/submit_order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ books: selectedBooks }),
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    alert("주문이 완료되었습니다!");
+                    location.reload();
+                })
+                .catch((error) => {
+                    console.error("주문 오류:", error);
+                });
+        }
+
+        // 초기 상태: 책 검색 탭 활성화
+        showSearchTab();
+    </script>
+</body>
+</html>
+
+<style>
+    .search-title img {
+        width: 45px; /* 원하는 너비로 설정 */
+        height: 45px; /* 원하는 높이로 설정 */
+    }
+</style>
+
+<script>
+    function goToHome() {
+        window.location.href = "/"; // home.html의 경로에 맞게 수정
+    }
+</script>

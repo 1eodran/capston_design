@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc
 from sqlalchemy.sql import func
@@ -14,8 +14,17 @@ import difflib
 import re
 from datetime import datetime
 import os
-import requests
+import sqlite3
+
+#웹크롤링 chrome driver
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
+import time
 
 app = Flask(__name__)
 CORS(app)
@@ -105,6 +114,23 @@ class LibraryTotalPoints(db.Model):
     library_id = db.Column(db.Integer, primary_key=True)
     total_points = db.Column(db.Integer, default=0)
     db.ForeignKeyConstraint(['library_id'], ['libraries.library_id'], ondelete='CASCADE')
+
+# 주문 및 결제 관련 테이블 모델 추가
+class Order(db.Model):
+    __tablename__ = 'orders'
+    order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 주문 ID
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False)  # 사용자 ID
+    address = db.Column(db.String(255), nullable=False)  # 배송 주소
+    created_at = db.Column(db.DateTime, default=db.func.now())  # 주문 생성 시간
+
+class OrderDetails(db.Model):
+    __tablename__ = 'order_details'
+    order_details_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 주문 상세 ID
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id', ondelete='CASCADE'), nullable=False)  # 주문 ID 참조
+    book_title = db.Column(db.String(255), nullable=False)  # 책 제목
+    author = db.Column(db.String(255))  # 저자
+    library = db.Column(db.String(255))  # 소장 도서관
+    image_url = db.Column(db.String(255))  # 이미지 URL
 
 # 데이터베이스 테이블 생성
 with app.app_context():
@@ -870,42 +896,162 @@ def update_points_json():
     # JSON 반환
     return jsonify(updated_points)
 
-#### 도서관사업소 자료검색 연동
-BASE_URL = "https://lib.changwon.go.kr/cl/search/data.html"
-
-# 책 검색 API
-@app.route('/search-books', methods=['GET', 'POST'])
-def search_books():
+#### 도서관사업소 자료검색 웹크롤링
+@app.route('/searchlibchangwon', methods=['GET', 'POST'])
+def searchlibchangwon():
     if request.method == 'POST':
-        data = request.get_json()
-        keyword = data.get('keyword', '').strip()  # 검색 키워드
-        library = data.get('library', '').strip()  # 선택한 도서관
+        search_query = request.form.get('search_query')  # 검색어
+        selected_library = request.form.get('selected_library')  # 선택한 도서관
 
-        if not keyword or not library:
-            return jsonify({"error": "검색어와 도서관을 입력해주세요."}), 400
+        # 디버깅: 입력값 출력
+        print(f"검색어: {search_query}, 선택한 도서관: {selected_library}")
+
+        if not search_query or not selected_library:
+            return render_template('searchlibchangwon.html', error="검색어와 도서관을 모두 입력해주세요.")
+
+        # Selenium 설정
+        service = Service('C:/Users/ksh07/Desktop/capston_design/chromedriver.exe')  # Chromedriver 경로
+        options = Options()
+        options.add_argument('--headless')  # 브라우저 UI 숨김
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(service=service, options=options)
 
         try:
-            # Changwon 도서관 검색 API 호출
-            params = {"kwd": keyword, "lib": library}
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-            }
-            response = requests.get(BASE_URL, params=params, headers=headers)
+            driver.get("https://lib.changwon.go.kr/cl/search/data.html")
 
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
-                search_results = soup.select_one(".resultList")  # 검색 결과 HTML
-                if search_results:
-                    return jsonify({"results_html": str(search_results)}), 200
-                else:
-                    return jsonify({"error": "검색 결과가 없습니다."}), 404
-            else:
-                return jsonify({"error": "도서관 서버에 문제가 있습니다."}), 500
+            # iframe 확인 및 전환
+            iframes = driver.find_elements(By.TAG_NAME, "iframe")
+            print(f"Iframes: {len(iframes)}")  # Iframe 개수 확인
+            if len(iframes) > 0:
+                driver.switch_to.frame(iframes[0])  # 첫 번째 iframe으로 전환
+
+            # 검색창 대기 및 입력
+            search_box = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, 'searchWord'))
+            )
+            search_box.clear()
+            search_box.send_keys(search_query)
+            print("검색창 탐색 및 입력 성공")
+
+            # 도서관 선택
+            library_checkbox = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, selected_library))
+            )
+            if not library_checkbox.is_selected():
+                library_checkbox.click()
+            print("체크박스 선택 성공")
+
+            # 검색 버튼 클릭
+            search_button = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "input.btn.btn-search"))
+            )
+            search_button.click()
+            print("검색 버튼 클릭 성공")
+
+            time.sleep(5)  # 검색 결과 로드 대기
+
+            # 페이지 소스 가져오기
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            print("HTML 페이지 소스 가져오기 성공")
+
+            # 검색 결과 추출
+            books = []
+            for book_div in soup.select('.list'):
+                try:
+                    title = book_div.select_one('.ico-bk a').get_text(strip=True)
+                    author = book_div.select_one('li strong:contains("저자") + span').get_text(strip=True)
+                    library = book_div.select_one('.blue').get_text(strip=True)
+                    status = book_div.select_one('.using1, .using2, .nonone').get_text(strip=True)
+                    img_tag = book_div.select_one('img')
+                    img_url = img_tag['src'] if img_tag else '이미지 없음'
+                    books.append({
+                        "title": title,
+                        "author": author,
+                        "library": library,
+                        "status": status,
+                        "image_url": img_url
+                    })
+                except AttributeError as e:
+                    print(f"검색 결과 추출 중 오류 발생: {e}")
+                    continue
+
+            return render_template('searchlibchangwon.html', books=books, search_query=search_query)
+
         except Exception as e:
-            return jsonify({"error": f"서버 오류: {str(e)}"}), 500
+            print(f"Error during Selenium execution: {e}")
+            return render_template('searchlibchangwon.html', error="검색 중 오류가 발생했습니다.")
 
-    # 검색 페이지 렌더링 (GET 요청)
-    return render_template('search_books.html')
+        finally:
+            driver.quit()
+
+    return render_template('searchlibchangwon.html')
+
+####책 주문
+# 결제 페이지 렌더링
+@app.route('/payment', methods=['POST'])
+def payment():
+    selected_books = request.form.getlist('selected_books')  # 체크박스로 선택된 책 정보(JSON 문자열)
+    selected_books = [eval(book) for book in selected_books]  # 문자열을 딕셔너리로 변환
+
+    return render_template('payment.html', selected_books=selected_books)
+
+# 결제 데이터 처리
+@app.route('/submit_payment', methods=['POST'])
+def submit_payment():
+    user_id = request.form.get('user_id')  # 로그인된 사용자 ID
+    address = request.form.get('address')  # 배송 주소
+    selected_books = request.form.getlist('selected_books')  # 선택된 책 정보(JSON 문자열)
+    selected_books = [eval(book) for book in selected_books]  # 문자열을 딕셔너리로 변환
+
+    try:
+        # orders 테이블에 데이터 삽입
+        new_order = Order(user_id=user_id, address=address)
+        db.session.add(new_order)
+        db.session.commit()
+
+        # order_details 테이블에 데이터 삽입
+        for book in selected_books:
+            new_order_details = OrderDetails(
+                order_id=new_order.order_id,
+                book_title=book['title'],
+                author=book['author'],
+                library=book['library'],
+                image_url=book['image_url']
+            )
+            db.session.add(new_order_details)
+
+        db.session.commit()
+        return redirect(url_for('order_history'))  # 주문 내역 페이지로 이동
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error occurred: {e}")
+        return jsonify({"error": "결제 처리에 실패했습니다."}), 500
+
+# 주문 내역 페이지
+@app.route('/order_history')
+def order_history():
+    user_id = request.args.get('user_id')  # 로그인된 사용자 ID
+    orders = Order.query.filter_by(user_id=user_id).all()  # 사용자의 주문만 가져오기
+    order_data = []
+
+    for order in orders:
+        details = OrderDetails.query.filter_by(order_id=order.order_id).all()
+        order_data.append({
+            "order_id": order.order_id,
+            "address": order.address,
+            "created_at": order.created_at,
+            "details": [{
+                "book_title": detail.book_title,
+                "author": detail.author,
+                "library": detail.library,
+                "image_url": detail.image_url
+            } for detail in details]
+        })
+
+    return render_template('orderhistory.html', orders=order_data)
+
+
 
 
 #### 화면 라우트
@@ -943,11 +1089,10 @@ def library_page():
 def insertisbn():
     return render_template('insertisbn.html')
 
-@app.route('/search-books')
-def search_books_page():
-    return render_template('search_books.html')
-
-
+# 도서관 사업소 웹크롤링링 기능
+@app.route('/searchlibchangwon')
+def searchlib():
+    return render_template('searchlibchangwon.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5500, debug=True)
