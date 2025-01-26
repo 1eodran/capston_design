@@ -11,37 +11,158 @@
         body {
             font-family: Arial, sans-serif;
         }
+        /* 상단 제목 스타일 */
+        .search-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+
+        .search-title img {
+            width: 45px;
+            height: 45px;
+        }
+        .tab-menu {
+            display: flex;
+            margin-top: 0; /* 기존 margin-top 값을 0으로 설정 */
+            border-bottom: 2px solid #ddd;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+            background-color: #f8f9fa;
+            border: none;
+            outline: none;
+            font-size: 16px;
+        }
+        .tab.active {
+            font-weight: bold;
+            border-bottom: 3px solid #007bff;
+            color: #007bff;
+        }
         .error {
             color: red;
         }
+        /* 책 섹션 스타일 */
+        .book-section {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid #ddd; /* 섹션 테두리 */
+            border-radius: 8px;
+            background-color: #f9f9f9; /* 배경색 추가 */
+        }
+
+        /* 개별 책 정보 스타일 */
         .book {
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-bottom: 1px solid #ddd; /* 책 정보 간 구분선 */
+        }
+
+        .book:last-child {
+            border-bottom: none; /* 마지막 책 정보는 구분선 제거 */
+        }
+
+        /* 책 정보 텍스트 크기 */
+        .book-details p {
+            font-size: 14px; /* 글자 크기 조정 */
+            margin: 5px 0;
+        }
+
+
+        /* 체크박스 스타일 */
+        .book-checkbox {
+            margin-left: 10px;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
         }
         .book img {
             max-width: 100px;
             margin-right: 20px;
         }
-        .search-title {
+        .payment-section {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .form-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 10px; /* 검색어와 선택 박스 간 간격 */
         }
-        .search-title i {
-            font-size: 24px;
-            color: #007bff;
+
+        
+
+        select.form-control {
+            appearance: none; /* 기본 화살표 제거 */
+            background: url('https://cdn-icons-png.flaticon.com/512/32/32195.png') no-repeat right 10px center;
+            background-size: 15px; /* 화살표 크기 조정 */
+            padding-right: 30px; /* 화살표 공간 확보 */
         }
-        .tab-menu {
-            margin-top: 10px;
+        #search_query {
+            margin-bottom: 15px; /* 검색 입력 칸 아래에 간격 추가 */
         }
-        .search-form {
-            margin-top: 15px;
-            display: none; /* 기본으로 검색 기능 숨김 */
+
+        #selected_library {
+            margin-bottom: 15px; /* 도서관 선택 칸 아래에 간격 추가 */
         }
-        .book-list {
+
+        /* 체크박스 크기 */
+        .checkbox {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* 결제 버튼 정렬 */
+        .text-right {
+            text-align: right;
+        }
+
+        .order-list {
             margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
         }
+
+        .order {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .order .book {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .order .book img {
+            max-width: 80px;
+            margin-right: 15px;
+            border-radius: 4px;
+        }
+
+        .order .book div {
+            font-size: 14px;
+        }
+
+        .order p {
+            margin: 0 0 10px;
+        }
+
+
     </style>
 </head>
 <body>
@@ -56,164 +177,265 @@
 
         <!-- Tab 메뉴 -->
         <nav class="tab-menu">
-            <button class="tab active" id="searchTab" onclick="showSearchTab()">책 검색</button>
+            <button class="tab active" id="searchTab" onclick="showSearchTab()">책 검색 및 대출</button>
             <button class="tab" id="orderTab" onclick="showOrderTab()">주문 내역</button>
         </nav>
 
-        <!-- 검색창 (책 검색 탭 전용) -->
-        <form method="POST" action="/searchlibchangwon" class="search-form" id="searchForm">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="search_query">검색어:</label>
-                    <input type="text" id="search_query" name="search_query" class="form-control" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="selected_library">도서관 선택:</label>
+        <!-- 검색창 및 결과 (책 검색 탭 전용) -->
+        <div id="searchTabContent" style="display: block;">
+            <form method="POST" action="/searchlibchangwon" class="search-form" id="searchForm">
+                <div class="form-group">
                     <select id="selected_library" name="selected_library" class="form-control" required>
-                        <option value="MA">창원중앙도서관</option>
-                        <option value="MF">마산내서도서관</option>
-                        <option value="MJ">진해도서관</option>
-                        <option value="MK">동부도서관</option>
-                        <option value="MC">고향의봄도서관</option>
-                        <option value="MM">명곡도서관</option>
-                        <option value="MB">성산도서관</option>
-                        <option value="MD">상남도서관</option>
-                        <option value="MG">마산합포도서관</option>
-                        <option value="ME">마산회원도서관</option>
-                        <option value="MH">마산중리초등복합시설도서관</option>
-                        <option value="MN">진해기적의도서관</option>
-                        <option value="MO">최윤덕도서관</option>
-                    </select>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary">검색</button>
-        </form>
-
-        <!-- 검색 결과 -->
-        <div id="searchResults" class="book-list">
-            {% if error %}
-                <p class="error">{{ error }}</p>
-            {% endif %}
-            {% if books %}
-                <h2>검색 결과:</h2>
-                <div>
-                    {% for book in books %}
-                    <div class="book">
-                        <input type="checkbox" class="checkbox" name="selected_books" value="{{ book.id }}" />
-                        <img src="{{ book.image_url if book.image_url else '../static/imgfile/noimage.png' }}" alt="{{ book.title }}">
-                        <div>
-                            <p><strong>제목:</strong> {{ book.title }}</p>
-                            <p><strong>저자:</strong> {{ book.author }}</p>
-                            <p><strong>소장기관:</strong> {{ book.library }}</p>
-                            <p><strong>대출 상태:</strong> {{ book.status }}</p>
+                            <option value="" disabled selected>도서관을 선택하시오.</option>
+                            <option value="MA">창원중앙도서관</option>
+                            <option value="MF">마산내서도서관</option>
+                            <option value="MJ">진해도서관</option>
+                            <option value="MK">동부도서관</option>
+                            <option value="MC">고향의봄도서관</option>
+                            <option value="MM">명곡도서관</option>
+                            <option value="MB">성산도서관</option>
+                            <option value="MD">상남도서관</option>
+                            <option value="MG">마산합포도서관</option>
+                            <option value="ME">마산회원도서관</option>
+                            <option value="MH">마산중리초등복합시설도서관</option>
+                            <option value="MN">진해기적의도서관</option>
+                            <option value="MO">최윤덕도서관</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="search_query" name="search_query" class="form-control" placeholder="책 제목 또는 저자를 입력하시오." required>
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa fa-search"></i>
+                            </button>
                         </div>
                     </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- 주문 내역 -->
-        <div id="orderDetails" style="display: none;">
-            <h2>주문 내역:</h2>
-            <div>
-                {% for order in orders %}
-                <div class="book">
-                    <img src="{{ order.image_url if order.image_url else '../static/imgfile/noimage.png' }}" alt="{{ order.title }}">
-                    <div>
-                        <p><strong>제목:</strong> {{ order.title }}</p>
-                        <p><strong>저자:</strong> {{ order.author }}</p>
-                        <p><strong>소장기관:</strong> {{ order.library }}</p>
-                        <p><strong>대출 상태:</strong> {{ order.status }}</p>
-                    </div>
-                </div>
-                {% endfor %}
+                </form>
             </div>
-        </div>
+            
+            <!-- 로딩 스피너 (버퍼링 표시) -->
+            <div id="loadingSpinner" style="display: none; text-align: center; margin-top: 20px;">
+                <p>검색 중입니다...</p>
+            </div>
 
-        <!-- 주문 버튼 -->
-        <div class="text-center mt-4">
-        <form id="selectedBooksForm" method="POST" action="/payment">
-            <input type="hidden" name="selected_books" id="selectedBooksInput">
-            <button type="submit" class="btn btn-success mt-3">주문하기</button>
-        </form>
+            <!-- 검색 결과 -->
+            <div id="searchResults" class="book-list">
+                {% if books %}
+                    <form id="paymentForm" method="POST" action="/submit_payment">
+                        <!-- 책 정보 섹션 -->
+                        <div class="book-section">
+                            {% for book in books %}
+                            <div class="book">
+                                <img src="{{ book.image_url if book.image_url else '../static/imgfile/noimage.png' }}" alt="{{ book.title }}">
+                                <div class="book-details">
+                                    <p><strong>제목:</strong> {{ book.title }}</p>
+                                    <p><strong>저자:</strong> {{ book.author }}</p>
+                                    <p><strong>소장기관:</strong> {{ book.library }}</p>
+                                    <p><strong>대출 상태:</strong> {{ book.status }}</p>
+                                </div>
+                                <div class="book-checkbox">
+                                    <input type="checkbox" class="checkbox" name="selected_books"
+                                        data-title="{{ book.title }}"
+                                        data-author="{{ book.author }}"
+                                        data-library="{{ book.library }}"
+                                        data-image-url="{{ book.image_url if book.image_url else '../static/imgfile/noimage.png' }}">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+            
+                        <!-- 결제 섹션 -->
+                        <div class="payment-section">
+                            <h3>비대면 대출신청</h3>
+                            <!-- 배송 주소 입력 -->
+                            <div class="mb-3">
+                                <label for="address">배송 주소:</label>
+                                <input type="text" id="address" name="address" class="form-control" placeholder="배송 주소를 입력하시오." required>
+                            </div>
+                            <!-- 회원 정보 -->
+                            <div class="mb-3">
+                                <label>회원 유형:</label>
+                                <div class="form-check">
+                                    <input type="radio" id="generalMember" name="memberType" value="일반회원" class="form-check-input" checked>
+                                    <label for="generalMember" class="form-check-label">일반회원 (유료택배)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="radio" id="bookNaraeMember" name="memberType" value="책나래 회원" class="form-check-input">
+                                    <label for="bookNaraeMember" class="form-check-label">책나래 회원 (장애인 무료택배)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="radio" id="momLibraryMember" name="memberType" value="맘(MOM)편한도서관서비스 회원" class="form-check-input">
+                                    <label for="momLibraryMember" class="form-check-label">맘(MOM)편한 회원 (무료택배)</label>
+                                </div>
+                            <!-- 결제 버튼 오른쪽 정렬 -->
+                            <div class="text-right">
+                                <button type="submit" class="btn btn-success" style="float: right;">결제하기</button>
+                            </div>
+                    </form>
+                {% else %}
+                    <p>검색 결과가 없습니다.</p>
+                {% endif %}
+            </div>
+        
+    </div>
+
+    <!-- 주문 내역 -->
+    <div id="orderTabContent" style="display: none;">
+        <h2>주문 내역:</h2>
+        <div id="orderList">
+            <!-- 주문 내역이 여기에 동적으로 추가됩니다. -->
         </div>
     </div>
 
     <script>
-        // '주문하기' 버튼 클릭 시 선택한 책 정보를 hidden input에 추가
-        document.getElementById('selectedBooksForm').addEventListener('submit', function (event) {
-            const selectedBooks = Array.from(document.querySelectorAll('input[name="selected_books"]:checked'))
-                .map((checkbox) => checkbox.value);
-
-            if (selectedBooks.length === 0) {
-                event.preventDefault();
-                alert("주문할 책을 선택해주세요.");
-                return;
-            }
-
-            document.getElementById('selectedBooksInput').value = JSON.stringify(selectedBooks);
+        // 검색 폼 제출 시 로딩 스피너 표시
+        document.getElementById('searchForm').addEventListener('submit', function (event) {
+            // 로딩 스피너 표시
+            document.getElementById('loadingSpinner').style.display = 'block';
+            // 검색 결과 숨김
+            document.getElementById('searchResults').style.display = 'none';
         });
-        
+
+        // 검색 결과가 렌더링된 후 로딩 스피너 숨김
+        function hideLoadingSpinner() {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('searchResults').style.display = 'block';
+        }
+
+
         // Tab 전환
+        // 검색 탭 활성화
         function showSearchTab() {
             document.getElementById('searchTab').classList.add('active');
             document.getElementById('orderTab').classList.remove('active');
-            document.getElementById('searchResults').style.display = 'block';
-            document.getElementById('orderDetails').style.display = 'none';
-            document.getElementById('searchForm').style.display = 'block'; // 검색창 표시
+            document.getElementById('searchTabContent').style.display = 'block'; // 검색 탭 표시
+            document.getElementById('orderTabContent').style.display = 'none'; // 주문 내역 탭 숨김
         }
 
+        // 주문 내역 탭 활성화
         function showOrderTab() {
             document.getElementById('orderTab').classList.add('active');
             document.getElementById('searchTab').classList.remove('active');
-            document.getElementById('searchResults').style.display = 'none';
-            document.getElementById('orderDetails').style.display = 'block';
-            document.getElementById('searchForm').style.display = 'none'; // 검색창 숨김
+            document.getElementById('searchTabContent').style.display = 'none'; // 검색 탭 숨김
+            document.getElementById('orderTabContent').style.display = 'block'; // 주문 내역 탭 표시
         }
 
-        // 주문 내역 저장
-        function submitOrder() {
-            const selectedBooks = Array.from(document.querySelectorAll('input[name="selected_books"]:checked'))
-                .map((checkbox) => checkbox.value);
-            
-            if (selectedBooks.length === 0) {
-                alert("주문할 책을 선택해주세요.");
+        // 홈 버튼 클릭 시
+        function goToHome() {
+            window.location.href = "/";
+        }
+        
+        // 주문 버튼 제출
+        document.getElementById('paymentForm')?.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const userId = sessionStorage.getItem("user_id"); // 세션에서 user_id 가져오기
+            if (!userId) {
+                alert("로그인이 필요합니다.");
                 return;
             }
 
+            const selectedBooks = Array.from(document.querySelectorAll('input[name="selected_books"]:checked'))
+                .map((checkbox) => JSON.stringify({
+                    title: checkbox.getAttribute('data-title'),
+                    author: checkbox.getAttribute('data-author'),
+                    library: checkbox.getAttribute('data-library'),
+                    image_url: checkbox.getAttribute('data-image-url')
+                }));
+
+            const address = document.getElementById('address').value;
+
+            if (selectedBooks.length === 0 || !address) {
+                alert("배송 주소와 책 정보를 확인해주세요.");
+                return;
+            }
+
+            // 서버로 데이터 전송
             fetch('/submit_order', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ books: selectedBooks }),
-            })
-                .then((response) => response.json())
-                .then((data) => {
-                    alert("주문이 완료되었습니다!");
-                    location.reload();
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    selected_books: selectedBooks, 
+                    address, 
+                    user_id: userId // user_id를 추가하여 서버로 전송
                 })
-                .catch((error) => {
-                    console.error("주문 오류:", error);
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    showOrderTab(); // 주문 내역 탭으로 이동
+                    loadOrders(); // 주문 내역 갱신
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting order:', error);
+            });
+        });
+
+        // 비대면 대출 내역 표시 스크립트
+        function loadOrders() {
+            const userId = sessionStorage.getItem("user_id"); // 세션에서 user_id 가져오기
+            if (!userId) {
+                alert("로그인이 필요합니다.");
+                return;
+            }
+
+            fetch(`/get_orders?user_id=${userId}`) // user_id를 쿼리 파라미터로 전달
+                .then(response => response.json())
+                .then(data => {
+                    const orderList = document.getElementById('orderList');
+                    orderList.innerHTML = ''; // 기존 내용 초기화
+
+                    if (!data.orders || data.orders.length === 0) {
+                        orderList.innerHTML = '<p>주문 내역이 없습니다.</p>';
+                        return;
+                    }
+
+                    // 주문 정보 렌더링
+                    data.orders.forEach(order => {
+                        const orderDiv = document.createElement('div');
+                        orderDiv.classList.add('order', 'mb-4', 'p-3', 'border', 'rounded');
+
+                        let booksHtml = '';
+                        order.books.forEach(book => {
+                            booksHtml += `
+                                <div class="d-flex align-items-center mb-3">
+                                    <img src="${book.image_url || '../static/imgfile/noimage.png'}" alt="${book.title}" class="mr-3" style="width: 60px; height: 60px;">
+                                    <div>
+                                        <p><strong>제목:</strong> ${book.title}</p>
+                                        <p><strong>저자:</strong> ${book.author || 'N/A'}</p>
+                                        <p><strong>소장기관:</strong> ${book.library || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        // 주문 ID, 주소, 시간과 책 리스트를 합침
+                        orderDiv.innerHTML = `
+                            <h5>주문 ID: ${order.order_id}</h5>
+                            <p><strong>사용자 ID:</strong> ${order.user_id}</p>
+                            <p><strong>주소:</strong> ${order.address}</p>
+                            <p><strong>주문 시간:</strong> ${order.created_at}</p>
+                            <div>${booksHtml}</div>
+                        `;
+                        orderList.appendChild(orderDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading orders:', error);
                 });
         }
 
-        // 초기 상태: 책 검색 탭 활성화
-        showSearchTab();
+        // 페이지 로드 시 주문 내역 자동 로드
+        document.addEventListener('DOMContentLoaded', loadOrders);
+
+
+
+
+
     </script>
 </body>
 </html>
-
-<style>
-    .search-title img {
-        width: 45px; /* 원하는 너비로 설정 */
-        height: 45px; /* 원하는 높이로 설정 */
-    }
-</style>
-
-<script>
-    function goToHome() {
-        window.location.href = "/"; // home.html의 경로에 맞게 수정
-    }
-</script>

@@ -31,8 +31,7 @@ CORS(app)
 
 #### ORM(SQLAlchemy) 설정
 # SQLAlchemy 데이터베이스 설정
-app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{os.getenv("DB_USER", "root")}:{os.getenv("DB_PASSWORD", "0987")}@{os.getenv("DB_HOST", "localhost")}:3306/{os.getenv("DB_NAME", "libgo")}'
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:0987@127.0.0.1:3306/libgo'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:0987@127.0.0.1:3306/libgo'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # SQLAlchemy 초기화
@@ -988,69 +987,81 @@ def searchlibchangwon():
     return render_template('searchlibchangwon.html')
 
 ####책 주문
-# 결제 페이지 렌더링
-@app.route('/payment', methods=['POST'])
-def payment():
-    selected_books = request.form.getlist('selected_books')  # 체크박스로 선택된 책 정보(JSON 문자열)
-    selected_books = [eval(book) for book in selected_books]  # 문자열을 딕셔너리로 변환
+@app.route('/submit_order', methods=['POST'])
+def submit_order():
+    data = request.get_json()
 
-    return render_template('payment.html', selected_books=selected_books)
+    if not data or 'selected_books' not in data or 'address' not in data or 'user_id' not in data:
+        return jsonify({"error": "유효한 데이터가 아닙니다.", "received_data": data}), 400
 
-# 결제 데이터 처리
-@app.route('/submit_payment', methods=['POST'])
-def submit_payment():
-    user_id = request.form.get('user_id')  # 로그인된 사용자 ID
-    address = request.form.get('address')  # 배송 주소
-    selected_books = request.form.getlist('selected_books')  # 선택된 책 정보(JSON 문자열)
-    selected_books = [eval(book) for book in selected_books]  # 문자열을 딕셔너리로 변환
+    selected_books = data['selected_books']
+    address = data['address']
+    user_id = data['user_id']  # 클라이언트에서 받은 user_id
 
     try:
-        # orders 테이블에 데이터 삽입
-        new_order = Order(user_id=user_id, address=address)
+        # 주문 저장
+        new_order = Order(user_id=user_id, address=address)  # user_id를 저장
         db.session.add(new_order)
-        db.session.commit()
+        db.session.commit()  # 주문 ID 생성
 
-        # order_details 테이블에 데이터 삽입
+        # 주문 상세 저장
         for book in selected_books:
-            new_order_details = OrderDetails(
+            book_data = eval(book)  # JSON 데이터를 Python dict로 변환
+            new_order_detail = OrderDetails(
                 order_id=new_order.order_id,
-                book_title=book['title'],
-                author=book['author'],
-                library=book['library'],
-                image_url=book['image_url']
+                book_title=book_data['title'],
+                author=book_data.get('author', 'N/A'),
+                library=book_data.get('library', 'N/A'),
+                image_url=book_data.get('image_url', '')
             )
-            db.session.add(new_order_details)
+            db.session.add(new_order_detail)
 
         db.session.commit()
-        return redirect(url_for('order_history'))  # 주문 내역 페이지로 이동
+        return jsonify({"message": "주문이 완료되었습니다.", "order_id": new_order.order_id}), 201
+
     except Exception as e:
         db.session.rollback()
-        print(f"Error occurred: {e}")
-        return jsonify({"error": "결제 처리에 실패했습니다."}), 500
+        print(f"Error saving order: {e}")
+        return jsonify({"error": "주문 저장 중 오류가 발생했습니다."}), 500
 
-# 주문 내역 페이지
-@app.route('/order_history')
-def order_history():
-    user_id = request.args.get('user_id')  # 로그인된 사용자 ID
-    orders = Order.query.filter_by(user_id=user_id).all()  # 사용자의 주문만 가져오기
-    order_data = []
+#주문내역
+@app.route('/get_orders', methods=['GET'])
+def get_orders():
+    user_id = request.args.get('user_id')  # 클라이언트에서 전달된 user_id 가져오기
 
-    for order in orders:
-        details = OrderDetails.query.filter_by(order_id=order.order_id).all()
-        order_data.append({
-            "order_id": order.order_id,
-            "address": order.address,
-            "created_at": order.created_at,
-            "details": [{
-                "book_title": detail.book_title,
-                "author": detail.author,
-                "library": detail.library,
-                "image_url": detail.image_url
-            } for detail in details]
-        })
+    if not user_id:
+        return jsonify({"error": "로그인이 필요합니다."}), 400
 
-    return render_template('orderhistory.html', orders=order_data)
+    try:
+        # `orders` 테이블에서 해당 사용자의 주문만 조회
+        orders = Order.query.filter_by(user_id=user_id).all()
+        result = []
 
+        for order in orders:
+            # 해당 주문 ID의 세부 정보를 `order_details`에서 가져옴
+            order_details = OrderDetails.query.filter_by(order_id=order.order_id).all()
+            books = [
+                {
+                    "title": detail.book_title,
+                    "author": detail.author,
+                    "library": detail.library,
+                    "image_url": detail.image_url,
+                }
+                for detail in order_details
+            ]
+
+            # `orders`와 `order_details` 정보를 합침
+            result.append({
+                "order_id": order.order_id,
+                "user_id": order.user_id,
+                "address": order.address,
+                "created_at": order.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                "books": books,
+            })
+
+        return jsonify({"orders": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 

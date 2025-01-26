@@ -101,12 +101,26 @@ body {
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
   }
 
-  #libgoimg {
+  /* #libgoimg {
     max-width: 75%;
     height: 10%;
     margin-left: 20px;
     margin-top: 5px;
+  } */
+
+  #libgoimg {
+    width: 180px !important; /* 원하는 너비 */
+    height: auto; /* 비율 유지 */
+    margin-top: 10px; /* 위쪽 여백 추가 */
+    margin-bottom: 20px; /* 아래쪽 여백 추가 */
+    display: block;
+    margin-left: auto; /* 중앙 정렬 */
+    margin-right: auto; /* 중앙 정렬 */
   }
+  
+  
+  
+
 
   #button-container2 {
     position: absolute;
