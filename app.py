@@ -15,6 +15,7 @@ import re
 from datetime import datetime
 import os
 import sqlite3
+from geopy.distance import geodesic
 
 #웹크롤링 chrome driver
 from selenium import webdriver
@@ -316,6 +317,81 @@ def scan_library():
     except Exception as e:
         print(f"도서관 이름 추출 중 오류 발생: {str(e)}")
         return jsonify({"error": "서버 오류가 발생했습니다."}), 500
+
+
+#### 도서관 혼잡도, 방문 유저 채크인
+# 도서관 위치 데이터
+libraries = [
+    {"position": {"lat": 35.2460769, "lng": 128.6910017}, "content": "국립창원대도서관"},
+    {"position": {"lat": 35.249278, "lng": 128.682592}, "content": "경남대표도서관"},
+    {"position": {"lat": 35.2138254, "lng": 128.6953575}, "content": "상남도서관"},
+    {"position": {"lat": 35.2021394, "lng": 128.7077471}, "content": "성산도서관"},
+    {"position": {"lat": 35.2334942, "lng": 128.6790201}, "content": "창원중앙도서관"},
+    {"position": {"lat": 35.1524669, "lng": 128.6675415}, "content": "진해도서관"},
+    {"position": {"lat": 35.1561894, "lng": 128.7063156}, "content": "진해기적의도서관"},
+    {"position": {"lat": 35.1000314, "lng": 128.8171678}, "content": "동부도서관"},
+    {"position": {"lat": 35.2246279, "lng": 128.573569}, "content": "최윤덕도서관"},
+    {"position": {"lat": 35.2327253, "lng": 128.5012807}, "content": "내서도서관"},
+    {"position": {"lat": 35.3227295, "lng": 128.5798893}, "content": "최윤덕도서관"},
+    {"position": {"lat": 35.2566599, "lng": 128.6184846}, "content": "고향의봄도서관"},
+    {"position": {"lat": 35.2556674, "lng": 128.5202443}, "content": "중리초등복합시설도서관"},
+    {"position": {"lat": 35.25321, "lng": 128.6484426}, "content": "명곡도서관"},
+    {"position": {"lat": 35.183104, "lng": 128.5628597}, "content": "마산합포도서관"}
+]
+
+# 사용자 위치 데이터 (user_id와 함께 관리)
+user_locations = {}
+
+@app.route('/check-congestion', methods=['POST'])
+def check_congestion():
+    data = request.get_json()
+    user_id = data.get('user_id')  # 고유 사용자 ID
+    user_lat = data.get('lat')
+    user_lng = data.get('lng')
+
+    if not user_id or not user_lat or not user_lng:
+        return jsonify({"error": "사용자 ID와 위치 정보가 제공되지 않았습니다."}), 400
+
+    # 사용자의 위치 정보 업데이트
+    user_locations[user_id] = {"lat": user_lat, "lng": user_lng}
+
+    # 도서관 혼잡도 계산
+    congestion_data = []
+
+    for library in libraries:
+        library_location = (library['position']['lat'], library['position']['lng'])
+        nearby_users = 0
+
+        # 사용자가 도서관 범위 안에 있는지 확인
+        to_remove = []
+        for uid, user_location in user_locations.items():
+            distance = geodesic((user_location['lat'], user_location['lng']), library_location).meters
+            if distance <= 500:
+                nearby_users += 1
+            else:
+                to_remove.append(uid)  # 범위를 벗어난 사용자 추적
+
+        # 범위를 벗어난 사용자 제거
+        for uid in to_remove:
+            del user_locations[uid]
+
+        # 혼잡도 수준 계산
+        if nearby_users > 50:
+            congestion_level = "높음"
+        elif nearby_users > 25:
+            congestion_level = "보통"
+        elif nearby_users > 10:
+            congestion_level = "낮음"
+        else:
+            congestion_level = "매우 낮음"
+
+        congestion_data.append({
+            "name": library['content'],
+            "nearby_users": nearby_users,
+            "congestion_level": congestion_level
+        })
+
+    return jsonify(congestion_data)
 
 
 #### 회원가입, 로그인 데이터처리

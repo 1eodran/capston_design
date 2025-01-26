@@ -19,6 +19,13 @@
 
 </head>
 <body>
+    <div id="congestionInfo" class="text-end" style="margin-right: 15px; margin-top: 10px;">
+        <h4>도서관 혼잡도</h4>
+        <div id="congestionDetails">
+          <p>혼잡도 정보를 불러오는 중...</p>
+        </div>
+      </div>
+      
     <header style="margin-top: 30px;">
         <!-- 도서관 이름 중앙 배치 -->
         <div class="text-center mb-2">
@@ -291,6 +298,110 @@
     }
 
 </script>
+
+<script>
+    async function fetchAndDisplayCongestion() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+  
+          try {
+            const response = await fetch('/check-congestion', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ lat: userLat, lng: userLng }),
+            });
+  
+            if (response.ok) {
+              const congestionData = await response.json();
+              displayCongestion(congestionData);
+            } else {
+              console.error("혼잡도 정보를 가져오는 중 오류 발생:", response.statusText);
+              document.getElementById("congestionDetails").innerHTML = "<p>혼잡도 정보를 불러오지 못했습니다.</p>";
+            }
+          } catch (error) {
+            console.error("혼잡도 정보를 가져오는 중 서버 오류 발생:", error);
+            document.getElementById("congestionDetails").innerHTML = "<p>혼잡도 정보를 불러오지 못했습니다.</p>";
+          }
+        });
+      } else {
+        document.getElementById("congestionDetails").innerHTML = "<p>위치 정보가 지원되지 않는 브라우저입니다.</p>";
+      }
+    }
+  
+    // 혼잡도 데이터를 화면에 표시
+    function displayCongestion(congestionData) {
+      const congestionDetails = document.getElementById("congestionDetails");
+      congestionDetails.innerHTML = congestionData
+        .map(
+          (library) => `
+            <div>
+              <strong>${library.name}</strong>: 
+              ${library.congestion_level} (${library.nearby_users}명)
+            </div>`
+        )
+        .join("");
+    }
+  
+    // 페이지 로드 시 혼잡도 정보 가져오기
+    window.onload = fetchAndDisplayCongestion;
+  </script>
+  
+  <script>
+    // 고유 사용자 ID 생성 및 관리
+    function getUserId() {
+      let userId = sessionStorage.getItem("user_id");
+      if (!userId) {
+        userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        sessionStorage.setItem("user_id", userId);
+      }
+      return userId;
+    }
+  
+    async function fetchUserLocationAndCongestion() {
+      const userId = getUserId();
+  
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(async (position) => {
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+  
+          try {
+            const response = await fetch('/check-congestion', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ user_id: userId, lat: userLat, lng: userLng }),
+            });
+  
+            if (response.ok) {
+              const congestionData = await response.json();
+              updateCongestionDisplay(congestionData);
+            } else {
+              console.error("혼잡도 데이터를 가져오는 중 오류 발생:", response.statusText);
+            }
+          } catch (error) {
+            console.error("서버 통신 오류:", error);
+          }
+        });
+      } else {
+        alert("위치 정보를 지원하지 않는 브라우저입니다.");
+      }
+    }
+  
+    function updateCongestionDisplay(congestionData) {
+      const congestionElement = document.getElementById("congestionInfo");
+      if (congestionElement) {
+        congestionElement.innerHTML = congestionData
+          .map((lib) => `<div>${lib.name}: ${lib.congestion_level} (${lib.nearby_users}명)</div>`)
+          .join("");
+      }
+    }
+  
+    // 페이지 로드 시 위치 정보 가져오기
+    window.onload = fetchUserLocationAndCongestion;
+  </script>
+  
 
 
 

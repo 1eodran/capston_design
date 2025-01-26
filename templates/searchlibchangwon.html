@@ -318,6 +318,8 @@
             document.getElementById('searchTab').classList.remove('active');
             document.getElementById('searchTabContent').style.display = 'none'; // 검색 탭 숨김
             document.getElementById('orderTabContent').style.display = 'block'; // 주문 내역 탭 표시
+            // 주문 내역 로드 호출
+            loadOrders();
         }
 
         // 홈 버튼 클릭 시
@@ -429,8 +431,6 @@
                 });
         }
 
-        // 페이지 로드 시 주문 내역 자동 로드
-        document.addEventListener('DOMContentLoaded', loadOrders);
 
 
 

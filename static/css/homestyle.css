@@ -59,7 +59,7 @@ body {
   width: 150px;
   height: 40px;
   margin: 10px 0;
-  background-color: #007bff;
+  background-color: #000000c5;
   color: white;
   border: none;
   border-radius: 5px;
@@ -68,7 +68,7 @@ body {
   margin-left: 10px;
 }
 #sidebar button:hover {
-  background-color: #0056b3;
+  background-color: #0000006e;
 }
 #map {
   flex: 1;
@@ -139,3 +139,4 @@ body {
     max-width: 180px;
   }
 }
+
