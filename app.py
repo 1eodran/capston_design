@@ -345,28 +345,32 @@ user_locations = {}
 @app.route('/check-congestion', methods=['POST'])
 def check_congestion():
     data = request.get_json()
-    user_id = data.get('user_id')  # 고유 사용자 ID
     user_lat = data.get('lat')
     user_lng = data.get('lng')
+    user_id = data.get('user_id')  # 고유 사용자 ID
+    library_name = data.get('library_name')  # 필터링할 도서관 이름
 
-    if not user_id or not user_lat or not user_lng:
-        return jsonify({"error": "사용자 ID와 위치 정보가 제공되지 않았습니다."}), 400
+    if not user_lat or not user_lng or not user_id:
+        return jsonify({"error": "위치 정보와 사용자 ID가 제공되지 않았습니다."}), 400
 
-    # 사용자의 위치 정보 업데이트
+    # 사용자 위치 업데이트
     user_locations[user_id] = {"lat": user_lat, "lng": user_lng}
 
-    # 도서관 혼잡도 계산
+    # 특정 도서관 혼잡도 계산
     congestion_data = []
 
     for library in libraries:
+        if library_name and library['content'] != library_name:
+            continue  # 필터링된 도서관이 아닌 경우 건너뛰기
+
         library_location = (library['position']['lat'], library['position']['lng'])
         nearby_users = 0
 
-        # 사용자가 도서관 범위 안에 있는지 확인
+        # 도서관 범위 안에 있는 사용자 수 계산
         to_remove = []
         for uid, user_location in user_locations.items():
             distance = geodesic((user_location['lat'], user_location['lng']), library_location).meters
-            if distance <= 500:
+            if distance <= 999990:
                 nearby_users += 1
             else:
                 to_remove.append(uid)  # 범위를 벗어난 사용자 추적
@@ -375,15 +379,14 @@ def check_congestion():
         for uid in to_remove:
             del user_locations[uid]
 
-        # 혼잡도 수준 계산
+        # 혼잡도 수준 결정
         if nearby_users > 50:
             congestion_level = "높음"
         elif nearby_users > 25:
             congestion_level = "보통"
-        elif nearby_users > 10:
-            congestion_level = "낮음"
-        else:
-            congestion_level = "매우 낮음"
+        elif nearby_users > 0:
+            congestion_level = "쾌적"
+        
 
         congestion_data.append({
             "name": library['content'],

@@ -19,19 +19,16 @@
 
 </head>
 <body>
-    <div id="congestionInfo" class="text-end" style="margin-right: 15px; margin-top: 10px;">
-        <h4>도서관 혼잡도</h4>
-        <div id="congestionDetails">
-          <p>혼잡도 정보를 불러오는 중...</p>
-        </div>
-      </div>
+    
       
     <header style="margin-top: 30px;">
         <!-- 도서관 이름 중앙 배치 -->
         <div class="text-center mb-2">
             <h1 id="libraryName" class="text-center" onclick="goToHome()">
                 Lv{{ level }}. {{ library_name }}
+                <span id="congestionStatus" style="margin-left: 7px; font-size: 18px;"></span>
             </h1>
+              
 
         <div class="text-center mb-2">
             <!-- 전체 Progress Bar -->
@@ -359,11 +356,20 @@
       return userId;
     }
   
-    async function fetchUserLocationAndCongestion() {
-      const userId = getUserId();
+    
+  </script>
+  <script>
+    async function fetchAndDisplayCongestion() {
+      const libraryName = "{{ library_name }}"; // 현재 도서관 이름
+      const userId = sessionStorage.getItem("user_id"); // 사용자 ID 가져오기
+  
+      if (!userId) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
   
       if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(async (position) => {
+        navigator.geolocation.getCurrentPosition(async (position) => {
           const userLat = position.coords.latitude;
           const userLng = position.coords.longitude;
   
@@ -371,14 +377,19 @@
             const response = await fetch('/check-congestion', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ user_id: userId, lat: userLat, lng: userLng }),
+              body: JSON.stringify({
+                user_id: userId,
+                lat: userLat,
+                lng: userLng,
+                library_name: libraryName, // 현재 도서관 이름 전달
+              }),
             });
   
             if (response.ok) {
               const congestionData = await response.json();
               updateCongestionDisplay(congestionData);
             } else {
-              console.error("혼잡도 데이터를 가져오는 중 오류 발생:", response.statusText);
+              console.error("혼잡도 정보를 가져오는 중 오류 발생:", response.statusText);
             }
           } catch (error) {
             console.error("서버 통신 오류:", error);
@@ -390,17 +401,50 @@
     }
   
     function updateCongestionDisplay(congestionData) {
-      const congestionElement = document.getElementById("congestionInfo");
-      if (congestionElement) {
-        congestionElement.innerHTML = congestionData
-          .map((lib) => `<div>${lib.name}: ${lib.congestion_level} (${lib.nearby_users}명)</div>`)
-          .join("");
+      const congestionStatus = document.getElementById("congestionStatus");
+  
+      if (congestionData.length > 0) {
+        const libraryCongestion = congestionData[0]; // 첫 번째 데이터 (해당 도서관)
+  
+        // 혼잡도 상태에 따른 아이콘과 색상 설정
+        let icon = "";
+        let color = "";
+  
+        switch (libraryCongestion.congestion_level) {
+          case "쾌적":
+            icon = "😀";
+            color = "green";
+            break;
+          case "보통":
+            icon = "😐";
+            color = "orange";
+            break;
+          case "높음":
+            icon = "😟";
+            color = "red";
+            break;
+          default:
+            icon = "❓";
+            color = "gray";
+        }
+  
+        // 상태와 아이콘 업데이트
+        congestionStatus.innerHTML = `
+          <span style="color: ${color}; font-weight: bold;">
+            ${icon} ${libraryCongestion.congestion_level} (${libraryCongestion.nearby_users}명)
+          </span>
+        `;
+      } else {
+        congestionStatus.innerHTML = `
+          <span style="color: gray;">혼잡도 정보를 불러오지 못했습니다.</span>
+        `;
       }
     }
   
-    // 페이지 로드 시 위치 정보 가져오기
-    window.onload = fetchUserLocationAndCongestion;
+    // 페이지 로드 시 혼잡도 정보 가져오기
+    window.onload = fetchAndDisplayCongestion;
   </script>
+  
   
 
 
