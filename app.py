@@ -370,7 +370,7 @@ def check_congestion():
         to_remove = []
         for uid, user_location in user_locations.items():
             distance = geodesic((user_location['lat'], user_location['lng']), library_location).meters
-            if distance <= 999990:
+            if distance <= 500:
                 nearby_users += 1
             else:
                 to_remove.append(uid)  # 범위를 벗어난 사용자 추적
@@ -384,7 +384,7 @@ def check_congestion():
             congestion_level = "높음"
         elif nearby_users > 25:
             congestion_level = "보통"
-        elif nearby_users > 0:
+        elif nearby_users >= 0:
             congestion_level = "쾌적"
         
 
@@ -1141,6 +1141,34 @@ def get_orders():
         return jsonify({"orders": result})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+#### 1등 유저 건물 위에 띄워주기
+# 1위 유저 정보 받기
+@app.route('/get_top_user', methods=['GET'])
+def get_top_user():
+    library_name = request.args.get('library', None)
+    if not library_name:
+        return jsonify({"error": "도서관 이름이 제공되지 않았습니다."}), 400
+
+    # 도서관 이름으로 library_id 찾기
+    library = Library.query.filter_by(library_name=library_name).first()
+    if not library:
+        return jsonify({"error": "해당 도서관 이름이 존재하지 않습니다."}), 404
+
+    library_id = library.library_id
+
+    # 순위표에서 1위 유저 찾기
+    top_user = UserLibraryPoints.query.filter_by(library_id=library_id).order_by(desc(UserLibraryPoints.total_points)).first()
+
+    if not top_user:
+        return jsonify({"message": "해당 도서관에 유저 데이터가 없습니다."}), 200
+
+    # 유저의 상세 정보 가져오기
+    user = User.query.filter_by(user_id=top_user.user_id).first()
+    return jsonify({
+        "user_id": user.id,
+        "points": top_user.total_points,
+    })
 
 
 

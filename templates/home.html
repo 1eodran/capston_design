@@ -126,32 +126,32 @@
       function updateMarkers(new_points, defaultImage, showOverlay) {
         clearMarkers();
         clearOverlays();
-    
-        new_points.forEach((point) => {
+
+        new_points.forEach(async (point) => {
           const iconData = defaultImage
             ? { src: defaultImage, size: new kakao.maps.Size(50, 50) }
             : getIconByVariable(point.variable); // lv1~lv5 아이콘 선택
-    
+
           const newMarkerImage = new kakao.maps.MarkerImage(iconData.src, iconData.size);
-    
+
           // 마커 생성
           const marker = new kakao.maps.Marker({
             position: new kakao.maps.LatLng(point.position.lat, point.position.lng),
             image: newMarkerImage,
           });
-    
+
           marker.setMap(map);
           markers.push(marker);
-    
+
           // 마커 클릭 이벤트
           kakao.maps.event.addListener(marker, "click", function () {
             window.location.href = `/rank?library=${encodeURIComponent(point.content)}`;
           });
-    
+
           // 텍스트와 이미지를 함께 표시하는 CustomOverlay
           if (showOverlay) {
             const iconOverlay = getIconOverlayByValue(point.variable);
-    
+
             const textOverlay = new kakao.maps.CustomOverlay({
               position: new kakao.maps.LatLng(point.position.lat, point.position.lng),
               content: `
@@ -175,9 +175,44 @@
               map: map,
             });
             overlays.push(textOverlay);
+
+            // 1위 유저 정보 가져오기
+            try {
+              const topUserResponse = await fetch(`/get_top_user?library=${encodeURIComponent(point.content)}`);
+              const topUserData = await topUserResponse.json();
+
+              if (topUserData.user_id) {
+                // 1위 유저 이름 오버레이 추가 (도서관 이름과 동일한 타이밍)
+                const topUserOverlay = new kakao.maps.CustomOverlay({
+                  position: new kakao.maps.LatLng(point.position.lat, point.position.lng),
+                  content: `
+                    <div style="
+                      background: rgba(255, 255, 255, 0.9);
+                      padding: 5px 10px;
+                      border-radius: 8px;
+                      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+                      font-size: 18px;
+                      font-weight: bold;
+                      color: #333;
+                      text-align: center;
+                      position: relative;
+                      top: -90px; /* 건물 위쪽으로 띄우기 */
+                    ">
+                      🏆1st.${topUserData.user_id}
+                    </div>
+                  `,
+                  map: map,
+                });
+
+                overlays.push(topUserOverlay);
+              }
+            } catch (error) {
+              console.error("1위 유저 정보를 가져오는 중 오류 발생:", error);
+            }
           }
         });
-      }
+  }
+
     
       // 마커와 오버레이 초기화
       function clearMarkers() {
