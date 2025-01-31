@@ -370,7 +370,7 @@ def check_congestion():
         to_remove = []
         for uid, user_location in user_locations.items():
             distance = geodesic((user_location['lat'], user_location['lng']), library_location).meters
-            if distance <= 500:
+            if distance <= 600:
                 nearby_users += 1
             else:
                 to_remove.append(uid)  # 범위를 벗어난 사용자 추적
@@ -395,6 +395,82 @@ def check_congestion():
         })
 
     return jsonify(congestion_data)
+
+# 도서관 방문시 포인트(위치기반)
+@app.route('/check_visit', methods=['POST'])
+def check_visit():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    library_id = data.get('library_id')
+
+    if not user_id or not library_id:
+        return jsonify({"error": "user_id와 library_id는 필수입니다."}), 400
+
+    try:
+        # 포인트 레코드 조회 또는 생성
+        points_record = UserLibraryPoints.query.filter_by(user_id=user_id, library_id=library_id).first()
+        is_new_record = False
+
+        if not points_record:
+            # 새 사용자 포인트 레코드 생성 (방문 카운트는 여기서 증가하지 않음)
+            points_record = UserLibraryPoints(
+                user_id=user_id,
+                library_id=library_id,
+                visit_count=1, #첫 방문 시 바로 1로
+                record_count=0,
+                like_count=0,
+            )
+            db.session.add(points_record)
+            db.session.commit()  # 먼저 커밋하여 초기 상태 저장
+            is_new_record = True
+
+        # 오늘 날짜 확인
+        today = datetime.now().date()
+        today_start = datetime.combine(today, datetime.min.time())
+        today_end = datetime.combine(today, datetime.max.time())
+
+        # 오늘 해당 도서관에 이미 방문했는지 확인
+        visit_record = UserRecord.query.filter(
+            UserRecord.user_id == user_id,
+            UserRecord.library_id == library_id,
+            UserRecord.visit_date.between(today_start, today_end)
+        ).first()
+
+        # 오늘 이미 방문한 경우 포인트 업데이트 중단 (204 상태 반환)
+        if visit_record:
+            return '', 204
+
+        # 새로운 방문 기록 추가
+        new_visit = UserRecord(
+            user_id=user_id,
+            library_id=library_id,
+            isbn="VISIT_LOG",
+            highlight="",
+            memo="도서관 방문 기록"
+        )
+        db.session.add(new_visit)
+
+        # 포인트 업데이트: 기존 레코드일 때만 포인트 증가
+        if not is_new_record:
+            points_record.visit_count += 1
+
+        # 최종 커밋
+        db.session.commit()
+
+        # 사용자 이름과 도서관 이름 가져오기
+        user = User.query.filter_by(user_id=user_id).first()
+        library = Library.query.filter_by(library_id=library_id).first()
+
+        return jsonify({
+            "message": f"{user.username} 사용자 {library.library_name} 방문 +100 points",
+            "visit_count": points_record.visit_count,
+            "total_points": points_record.total_points
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error occurred: {e}")
+        return jsonify({"error": "방문 확인 중 오류가 발생했습니다."}), 500
 
 
 #### 회원가입, 로그인 데이터처리

@@ -45,6 +45,26 @@
       </div>
     </div>
 
+    <!-- 메시지 표시 영역 추가 -->
+    <div id="visitMessage" style="
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #2219d4;
+    color: white;
+    padding: 15px 20px;
+    width: 80%;              /* 가로 길이 설정 */
+    max-width: 800px;        /* 최대 너비 설정 */
+    text-align: center;      /* 중앙 정렬 */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    font-weight: bold;
+    z-index: 9999;
+    "></div>
+
+
     <div id="map"></div>
     <!-- 카카오 맵 API 불러오기 -->
     <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=8fa4de0356d694ebcb6e44ec0b2b60e8"></script>
@@ -392,6 +412,50 @@
   // 페이지 로드 시 위치 정보 가져오기
   window.onload = fetchUserLocationAndCongestion;
 </script>
+
+<script>
+  // 방문 확인 및 메시지 표시 함수
+  async function checkVisitAndDisplayMessage() {
+    const userId = sessionStorage.getItem("user_id");
+    const libraryId = 1;  // 예시로 설정한 도서관 ID, 실제 구현에서는 동적으로 할당 필요
+
+    try {
+      const response = await fetch('/check_visit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, library_id: libraryId }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // 방문 성공 메시지를 표시
+        showVisitMessage(data.message);
+      }
+    } catch (error) {
+      console.error("방문 확인 중 오류 발생:", error);
+    }
+  }
+
+  // 메시지 표시 함수
+  function showVisitMessage(message) {
+    const messageElement = document.getElementById("visitMessage");
+    messageElement.textContent = message;
+    messageElement.style.display = "block";
+
+    // 일정 시간 후 메시지 숨기기
+    setTimeout(() => {
+      messageElement.style.display = "none";
+    }, 3000);  // 3초 후 메시지 숨김
+  }
+
+  // 페이지 로드 시 방문 확인 실행
+  window.onload = function () {
+    fetchUserLocationAndCongestion();  // 기존 위치 정보 가져오기 함수
+    checkVisitAndDisplayMessage();     // 방문 확인 및 메시지 표시 함수 호출
+  };
+</script>
+
 
   </body>
 </html>
