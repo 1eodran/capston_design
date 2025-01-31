@@ -370,7 +370,7 @@ def check_congestion():
         to_remove = []
         for uid, user_location in user_locations.items():
             distance = geodesic((user_location['lat'], user_location['lng']), library_location).meters
-            if distance <= 600:
+            if distance <= 300:
                 nearby_users += 1
             else:
                 to_remove.append(uid)  # 범위를 벗어난 사용자 추적

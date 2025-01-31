@@ -144,15 +144,27 @@
 
         .order .book {
             display: flex;
-            align-items: center;
+            align-items: flex-start; /* 상단 정렬 */
             margin-bottom: 15px;
         }
 
         .order .book img {
-            max-width: 80px;
-            margin-right: 15px;
-            border-radius: 4px;
+            width: 150px; /* 사진 크기 조정 */
+            height: auto;
+            margin-right: 20px; /* 사진과 텍스트 간격 */
+            border-radius: 8px;
         }
+
+        .order .book-info {
+            flex: 1;
+        }
+
+        .order .book-info p {
+            margin: 5px 0;
+            font-size: 17px;
+            color: #000000; /* 회색 텍스트 */
+        }
+
 
         .order .book div {
             font-size: 14px;
@@ -225,8 +237,10 @@
                         <!-- 책 정보 섹션 -->
                         <div class="book-section">
                             {% for book in books %}
-                            <div class="book">
-                                <img src="{{ book.image_url if book.image_url else '../static/imgfile/noimage.png' }}" alt="{{ book.title }}">
+                            <div class="book"> 
+                                <img src="{{ book.image_url if book.image_url else '/static/imgfile/noimage.png' }}" 
+                                    alt="기본 이미지"
+                                    onerror="this.src='/static/imgfile/noimage.png';">
                                 <div class="book-details">
                                     <p><strong>제목:</strong> {{ book.title }}</p>
                                     <p><strong>저자:</strong> {{ book.author }}</p>
@@ -238,7 +252,7 @@
                                         data-title="{{ book.title }}"
                                         data-author="{{ book.author }}"
                                         data-library="{{ book.library }}"
-                                        data-image-url="{{ book.image_url if book.image_url else '../static/imgfile/noimage.png' }}">
+                                        data-image-url="{{ book.image_url if book.image_url else '..\static\imgfile\noimage.png' }}" onerror="this.src='/static/imgfile/noimage.png';">
                                 </div>
                             </div>
                             {% endfor %}
@@ -404,9 +418,9 @@
                         let booksHtml = '';
                         order.books.forEach(book => {
                             booksHtml += `
-                                <div class="d-flex align-items-center mb-3">
-                                    <img src="${book.image_url || '../static/imgfile/noimage.png'}" alt="${book.title}" class="mr-3" style="width: 60px; height: 60px;">
-                                    <div>
+                                <div class="book">
+                                    <img src="${book.image_url || '..\\static\\imgfile\\noimage.png'}" onerror="this.src='/static/imgfile/noimage.png';">
+                                    <div class="book-info">
                                         <p><strong>제목:</strong> ${book.title}</p>
                                         <p><strong>저자:</strong> ${book.author || 'N/A'}</p>
                                         <p><strong>소장기관:</strong> ${book.library || 'N/A'}</p>
@@ -414,6 +428,7 @@
                                 </div>
                             `;
                         });
+
 
                         // 주문 ID, 주소, 시간과 책 리스트를 합침
                         orderDiv.innerHTML = `
