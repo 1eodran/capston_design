@@ -131,6 +131,7 @@ class OrderDetails(db.Model):
     author = db.Column(db.String(255))  # 저자
     library = db.Column(db.String(255))  # 소장 도서관
     image_url = db.Column(db.String(255))  # 이미지 URL
+    loan_status = db.Column(db.String(50), default="배송중")  # 대출 상태 (대출중, 배달중, 수거중, 반납완료)
 
 # 데이터베이스 테이블 생성
 with app.app_context():
@@ -370,7 +371,7 @@ def check_congestion():
         to_remove = []
         for uid, user_location in user_locations.items():
             distance = geodesic((user_location['lat'], user_location['lng']), library_location).meters
-            if distance <= 300:
+            if distance <= 100:
                 nearby_users += 1
             else:
                 to_remove.append(uid)  # 범위를 벗어난 사용자 추적
@@ -1003,6 +1004,7 @@ def rank_page():
         all_user_records_bookinfos_data=all_user_records_bookinfos_data
     )
 
+#### 도서관 혼잡도
 # 도서관 포인트 지도 데이터 반환
 @app.route('/update_points_json', methods=['GET'])
 def update_points_json():
@@ -1197,10 +1199,12 @@ def get_orders():
             order_details = OrderDetails.query.filter_by(order_id=order.order_id).all()
             books = [
                 {
+                    "order_details_id": detail.order_details_id,
                     "title": detail.book_title,
                     "author": detail.author,
                     "library": detail.library,
                     "image_url": detail.image_url,
+                    "loan_status": detail.loan_status
                 }
                 for detail in order_details
             ]
@@ -1217,6 +1221,32 @@ def get_orders():
         return jsonify({"orders": result})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/return_request', methods=['POST'])
+def return_request():
+    data = request.get_json()
+    order_details_id = data.get('order_details_id')
+
+    if not order_details_id:
+        return jsonify({"error": "order_details_id가 필요합니다."}), 400
+
+    # 숫자로 변환하여 검색
+    try:
+        order_details_id = int(order_details_id)  
+    except ValueError:
+        return jsonify({"error": "유효한 order_details_id가 아닙니다."}), 400
+
+    # 주문 상세 레코드 조회
+    order_detail = OrderDetails.query.filter_by(order_details_id=order_details_id).first()
+    if not order_detail:
+        return jsonify({"error": "해당 주문 상세 정보를 찾을 수 없습니다."}), 404
+
+    # 대출 상태를 "수거중"으로 변경
+    order_detail.loan_status = "수거중"
+    db.session.commit()
+
+    return jsonify({"message": "반납 신청이 완료되었습니다.", "loan_status": order_detail.loan_status}), 200
+
 
 #### 1등 유저 건물 위에 띄워주기
 # 1위 유저 정보 받기

@@ -174,6 +174,8 @@
             margin: 0 0 10px;
         }
 
+       
+
 
     </style>
 </head>
@@ -301,6 +303,8 @@
         </div>
     </div>
 
+    
+
     <script>
         // 검색 폼 제출 시 로딩 스피너 표시
         document.getElementById('searchForm').addEventListener('submit', function (event) {
@@ -330,11 +334,15 @@
         function showOrderTab() {
             document.getElementById('orderTab').classList.add('active');
             document.getElementById('searchTab').classList.remove('active');
-            document.getElementById('searchTabContent').style.display = 'none'; // 검색 탭 숨김
-            document.getElementById('orderTabContent').style.display = 'block'; // 주문 내역 탭 표시
-            // 주문 내역 로드 호출
+
+            // 검색 탭 숨기기, 주문 내역 탭 표시
+            document.getElementById('searchTabContent').style.display = 'none';
+            document.getElementById('orderTabContent').style.display = 'block';
+
+            // 항상 주문 내역 불러오기
             loadOrders();
         }
+
 
         // 홈 버튼 클릭 시
         function goToHome() {
@@ -391,60 +399,111 @@
             });
         });
 
-        // 비대면 대출 내역 표시 스크립트
         function loadOrders() {
-            const userId = sessionStorage.getItem("user_id"); // 세션에서 user_id 가져오기
-            if (!userId) {
-                alert("로그인이 필요합니다.");
+    const userId = sessionStorage.getItem("user_id"); // 세션에서 user_id 가져오기
+    if (!userId) {
+        alert("로그인이 필요합니다.");
+        return;
+    }
+
+    fetch(`/get_orders?user_id=${userId}`) // user_id를 쿼리 파라미터로 전달
+        .then(response => response.json())
+        .then(data => {
+            const orderList = document.getElementById('orderList');
+            orderList.innerHTML = ''; // 기존 내용 초기화
+
+            if (!data.orders || data.orders.length === 0) {
+                orderList.innerHTML = '<p>주문 내역이 없습니다.</p>';
                 return;
             }
 
-            fetch(`/get_orders?user_id=${userId}`) // user_id를 쿼리 파라미터로 전달
-                .then(response => response.json())
-                .then(data => {
-                    const orderList = document.getElementById('orderList');
-                    orderList.innerHTML = ''; // 기존 내용 초기화
+            // 주문 정보 렌더링
+            data.orders.forEach(order => {
+                const orderDiv = document.createElement('div');
+                orderDiv.classList.add('order', 'mb-4', 'p-3', 'border', 'rounded');
 
-                    if (!data.orders || data.orders.length === 0) {
-                        orderList.innerHTML = '<p>주문 내역이 없습니다.</p>';
-                        return;
+                let booksHtml = '';
+                let orderStatus = "배송중"; // 기본값 설정
+                let firstOrderDetailsId = null; // 첫 번째 책의 order_details_id 저장
+
+                order.books.forEach((book, index) => {
+                    if (index === 0) firstOrderDetailsId = book.order_details_id; // 첫 번째 책 ID 저장
+
+                    booksHtml += `
+                        <div class="book">
+                            <img src="${book.image_url || '../static/imgfile/noimage.png'}" onerror="this.src='/static/imgfile/noimage.png';">
+                            <div class="book-info">
+                                <p><strong>제목:</strong> ${book.title}</p>
+                                <p><strong>저자:</strong> ${book.author || 'N/A'}</p>
+                                <p><strong>소장기관:</strong> ${book.library || 'N/A'}</p>
+                            </div>
+                        </div>
+                    `;
+
+                    // 주문 상태를 최신 상태로 반영
+                    if (book.loan_status === "대출중") {
+                        orderStatus = "대출중";
+                    } else if (book.loan_status === "수거중") {
+                        orderStatus = "반납 요청";
+                    } else if (book.loan_status === "반납완료") {
+                        orderStatus = "반납완료";
                     }
-
-                    // 주문 정보 렌더링
-                    data.orders.forEach(order => {
-                        const orderDiv = document.createElement('div');
-                        orderDiv.classList.add('order', 'mb-4', 'p-3', 'border', 'rounded');
-
-                        let booksHtml = '';
-                        order.books.forEach(book => {
-                            booksHtml += `
-                                <div class="book">
-                                    <img src="${book.image_url || '..\\static\\imgfile\\noimage.png'}" onerror="this.src='/static/imgfile/noimage.png';">
-                                    <div class="book-info">
-                                        <p><strong>제목:</strong> ${book.title}</p>
-                                        <p><strong>저자:</strong> ${book.author || 'N/A'}</p>
-                                        <p><strong>소장기관:</strong> ${book.library || 'N/A'}</p>
-                                    </div>
-                                </div>
-                            `;
-                        });
-
-
-                        // 주문 ID, 주소, 시간과 책 리스트를 합침
-                        orderDiv.innerHTML = `
-                            <h5>주문 ID: ${order.order_id}</h5>
-                            <p><strong>사용자 ID:</strong> ${order.user_id}</p>
-                            <p><strong>주소:</strong> ${order.address}</p>
-                            <p><strong>주문 시간:</strong> ${order.created_at}</p>
-                            <div>${booksHtml}</div>
-                        `;
-                        orderList.appendChild(orderDiv);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading orders:', error);
                 });
-        }
+
+                // 반납 신청 버튼 (한 주문당 하나만 표시)
+                let returnButtonHtml = "";
+                if (orderStatus === "대출중" || orderStatus === "배송중") {
+                    returnButtonHtml = `
+                        <button class="return-btn btn btn-danger btn-sm" data-id="${firstOrderDetailsId}">
+                            반납 신청
+                        </button>
+                    `;
+                }
+
+                // 주문 ID, 주소, 시간, 주문 전체 상태를 표시
+                orderDiv.innerHTML = `
+                    <h5>주문 ID: ${order.order_id}</h5>
+                    <p><strong>사용자 ID:</strong> ${order.user_id}</p>
+                    <p><strong>주소:</strong> ${order.address}</p>
+                    <p><strong>주문 시간:</strong> ${order.created_at}</p>
+                    <p><strong>주문 상태:</strong> <span class="order-status">${orderStatus}</span></p>
+                    <div>${booksHtml}</div>
+                    ${returnButtonHtml} <!-- 한 주문당 하나의 버튼만 추가 -->
+                `;
+                orderList.appendChild(orderDiv);
+            });
+
+            // 반납 신청 버튼 이벤트 리스너 추가
+            document.querySelectorAll(".return-btn").forEach(button => {
+                button.addEventListener("click", function () {
+                    const orderDetailsId = this.getAttribute("data-id");
+
+                    fetch("/return_request", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ order_details_id: orderDetailsId })
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.error) {
+                            alert(result.error);
+                        } else {
+                            alert("반납 신청이 완료되었습니다.");
+
+                            // 주문 내역을 새로고침하여 상태 업데이트
+                            loadOrders();
+                        }
+                    })
+                    .catch(error => console.error("Error:", error));
+                });
+            });
+        })
+        .catch(error => {
+            console.error('Error loading orders:', error);
+        });
+}
+        
+        
 
 
 
