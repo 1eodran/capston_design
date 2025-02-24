@@ -918,12 +918,32 @@ def update_likes():
         print(f"Error occurred: {e}")
         return jsonify({"error": f"서버 에러: {str(e)}"}), 500
 
+# 특정 사용자의 해당 도서관 내 랭킹을 계산하는 함수
+def get_user_rank(user_id, library_id):
+    # 해당 도서관의 랭킹 데이터를 가져오기 (총 포인트 기준 정렬)
+    ranking_data = UserLibraryPoints.query.filter_by(library_id=library_id).order_by(desc(UserLibraryPoints.total_points)).all()
+
+    # 랭킹을 계산하기 위한 리스트 생성
+    rank_list = []
+    for idx, record in enumerate(ranking_data):
+        rank_list.append({
+            "rank": idx + 1,
+            "user_id": record.user_id,
+            "points": record.total_points
+        })
+
+    # 현재 사용자의 순위를 찾아 반환
+    user_rank = next((item["rank"] for item in rank_list if item["user_id"] == user_id), None)
+
+    return user_rank if user_rank else len(rank_list) + 1  # 사용자가 리스트에 없으면 마지막 순위 부여
+
 
 #### 도서관별 랭킹 페이지 - rank.html
 # 도서관별 사용자 랭킹
 @app.route('/rank', methods=['GET'])
 def rank_page():
     library_name = request.args.get('library', None)
+    user_id = request.args.get('user_id')  # 로그인한 사용자의 user_id (쿼리스트링으로 전달)
 
     if not library_name:
         return jsonify({"error": "도서관 이름이 제공되지 않았습니다."}), 400
@@ -964,13 +984,14 @@ def rank_page():
         # user 테이블에서 user_id에 해당하는 사용자 정보 가져오기
         user = User.query.filter_by(user_id=record.user_id).first()
         user_id_from_user_table = user.id if user else None  # 사용자 아이디 가져오기
-        
+        user_obj = User.query.filter_by(user_id=record.user_id).first()
         # 랭킹 데이터 구성
         rank_list.append({
             "rank": idx + 1,
             "user_id": record.user_id,
             "id": user_id_from_user_table,  # 사용자 테이블의 아이디 (또는 None)
-            "points": record.total_points
+            "points": record.total_points,
+            "username": user_obj.username,         # 사용자 이름
         })
 
     # 해당 도서관의 모든 서평 가져오기
@@ -992,6 +1013,27 @@ def rank_page():
             if book_info:
                 record_with_info = {**record, **book_info, "id": user_id_from_user_table}
                 all_user_records_bookinfos_data.append(record_with_info)
+    
+    # 현재 사용자의 랭킹 가져오기
+    user_rank = get_user_rank(int(user_id), library_id) if user_id else None
+
+    # 로그인한 사용자의 순위와 포인트 조회 (computed column total_points 사용)
+    user_points = 0
+    user_rank = None
+    user_name = None
+    if user_id:
+        try:
+            user_rank = next((item["rank"] for item in rank_list if item["user_id"] == int(user_id)), None)
+            user_points_record = UserLibraryPoints.query.filter_by(user_id=int(user_id), library_id=library_id).first()
+            if user_points_record:
+                user_points = user_points_record.total_points
+
+            # user_id로 사용자 이름 조회 (users 테이블의 username)
+            user_obj = User.query.filter_by(user_id=int(user_id)).first()
+            if user_obj:
+                user_name = user_obj.username
+        except Exception as e:
+            print(f"사용자 포인트 조회 중 오류 발생: {e}")
 
     return render_template(
         'rank.html',
@@ -1001,7 +1043,11 @@ def rank_page():
         max_points_in_level=max_points_in_level,
         progress_percent=int(progress_percent),
         rank_list=rank_list,
-        all_user_records_bookinfos_data=all_user_records_bookinfos_data
+        all_user_records_bookinfos_data=all_user_records_bookinfos_data,
+        user_rank=user_rank,  # 현재 사용자의 랭킹 추가
+        user_points=user_points,
+        user_id=user_id,  # 템플릿에 로그인한 user_id도 넘김
+        user_name=user_name  # 사용자 이름 (username)
     )
 
 #### 도서관 혼잡도
@@ -1018,7 +1064,7 @@ def update_points_json():
         {"position": {"lat": 35.1524669, "lng": 128.6675415}, "content": "진해도서관"},
         {"position": {"lat": 35.1561894, "lng": 128.7063156}, "content": "진해기적의도서관"},
         {"position": {"lat": 35.1000314, "lng": 128.8171678}, "content": "동부도서관"},
-        {"position": {"lat": 35.2246279, "lng": 128.573569}, "content": "최윤덕도서관"},
+        {"position": {"lat": 35.2246279, "lng": 128.573569}, "content": "마산회원도서관"},
         {"position": {"lat": 35.2327253, "lng": 128.5012807}, "content": "내서도서관"},
         {"position": {"lat": 35.3227295, "lng": 128.5798893}, "content": "최윤덕도서관"},
         {"position": {"lat": 35.2566599, "lng": 128.6184846}, "content": "고향의봄도서관"},

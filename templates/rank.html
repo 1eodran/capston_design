@@ -17,6 +17,11 @@
       rel="stylesheet"
     />
 
+    <!-- Kakao 지도 SDK -->
+    <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_MAP_KEY"></script>
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 </head>
 <body>
     
@@ -54,7 +59,19 @@
         <button type="submit" class="btn btn-outline-secondary search-btn">
             <i class="fa-solid fa-magnifying-glass"></i>
         </button>
-        </div>
+        
+        <!-- 공유 버튼 추가 -->
+        <button id="shareBtn" type="button" class="btn btn-outline-primary share-btn" style="margin-left: 10px;" onclick="shareRankInfo()">
+          <i class="fa-solid fa-share-alt"></i> 
+        </button>
+
+        <span id="userRankDisplay" style="display: none;">{{ user_rank }}</span>
+        <span id="userPointsDisplay" style="display: none;">{{ user_points }}</span>
+        <span id="userNameDisplay" style="display: none;">{{ user_name }}</span>
+        
+
+        
+        
     </div>
   </header>
   
@@ -444,7 +461,97 @@
     // 페이지 로드 시 혼잡도 정보 가져오기
     window.onload = fetchAndDisplayCongestion;
   </script>
+
+
   
+  <script>
+    document.getElementById("shareBtn").addEventListener("click", shareRankInfo);
+
+      async function shareRankInfo() {
+          const userId = sessionStorage.getItem("user_id");
+          if (!userId) {
+              alert("로그인이 필요합니다.");
+              return;
+          }
+
+          const libraryName = "{{ library_name }}"; // 현재 도서관 이름
+          const userRank = document.getElementById("userRankDisplay").innerText; // 순위 가져오기
+          const userPoints = document.getElementById("userPointsDisplay").innerText; // 포인트 가져오기
+          const userName = document.getElementById("userNameDisplay").innerText;
+
+
+
+          try {
+              // 사용자의 서평 정보 가져오기
+              const recordsResponse = await fetch(`/board?user_id=${userId}`);
+              const recordsHtml = await recordsResponse.text();
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(recordsHtml, "text/html");
+              const bookTitles = [...doc.querySelectorAll(".book-info h2")].map(el => el.innerText);
+
+              // 번호 매긴 책 제목만 표시 (최대 5개)
+              const bookList = bookTitles
+                  .map((title, index) => `${index + 1}. ${title}`)
+                  .slice(0, 5)
+                  .join("<br>");
+
+              // 캡처할 요소 만들기
+              const captureArea = document.createElement("div");
+              captureArea.id = "captureArea";
+              captureArea.style.position = "absolute";
+              captureArea.style.left = "-9999px";
+              captureArea.style.width = "400px";
+              captureArea.style.padding = "20px";
+              captureArea.style.backgroundColor = "white";
+              captureArea.style.borderRadius = "10px";
+              captureArea.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.1)";
+              captureArea.style.textAlign = "left"; // 📌 왼쪽 정렬로 변경
+              captureArea.innerHTML = `
+                  <!-- 웹사이트 로고 -->
+                  <div style="text-align: center;">
+                      <img src="../static/imgfile/libgo.jpg" style="width: 180px; margin-bottom: 20px;" />
+                  </div>
+
+                  <!-- 요약 정보 -->
+                  <p style="font-size: 18px; font-weight: bold; line-height: 1.5; margin-bottom: 10px;">
+                      🏆 도서관: <span style="color: #119fbf;">${libraryName}</span><br>
+                      👤 이름: <b>${userName}</b><br>
+                      🔥 내 순위: <b>${userRank}위</b><br>
+                      💎 포인트: <b>${userPoints}</b><br>
+                      📖 독서기록: <b>${bookTitles.length}권</b><br>
+                      📚 기록한 책:<br> ${bookList}
+                  </p>
+
+                  <!-- 도서관 아이콘 -->
+                  <div style="text-align: center; margin-top: 10px;">
+                      <img src="../static/imgfile/library.png" style="width: 80px;">
+                  </div>
+              `;
+              document.body.appendChild(captureArea);
+
+              // html2canvas 실행 (한 번만 실행되도록 변경)
+              html2canvas(captureArea, { scale: 1 }).then(canvas => {
+                  const dataURL = canvas.toDataURL("image/png");
+
+                  // 다운로드 링크 생성 후 클릭 (1장만 저장)
+                  const link = document.createElement("a");
+                  link.href = dataURL;
+                  link.download = `${libraryName}_RankInfo.png`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+
+                  // 캡처 영역 삭제 (메모리 최적화)
+                  document.body.removeChild(captureArea);
+              });
+
+          } catch (error) {
+              console.error("공유 이미지 생성 중 오류 발생:", error);
+          }
+      }
+
+
+  </script>
   
 
 
