@@ -91,7 +91,7 @@
         {% endif %}
 
         <form action="/submit-isbn" method="post">
-            <label for="isbn">ISBN 코드:</label>
+            <label for="isbn">ISBN 13자리 또는 책 제목을 입력</label>
             <input type="text" id="isbn" name="isbn" value="{{ isbn if isbn else '' }}" required>
             <button type="submit">제출</button>
         </form>

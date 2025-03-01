@@ -6,17 +6,13 @@
   font-family: "Godo";
   font-style: normal;
   font-weight: 400;
-  src: url("//cdn.jsdelivr.net/korean-webfonts/1/corps/godo/Godo/GodoM.woff2")
-      format("woff2"),
-    url("//cdn.jsdelivr.net/korean-webfonts/1/corps/godo/Godo/GodoM.woff")
-      format("woff");
+  src: url("//cdn.jsdelivr.net/korean-webfonts/1/corps/godo/Godo/GodoM.woff2") format("woff2"),
+       url("//cdn.jsdelivr.net/korean-webfonts/1/corps/godo/Godo/GodoM.woff") format("woff");
 }
 
 @font-face {
   font-family: "godoMaum";
-
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/godoMaum.woff")
-    format("woff");
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/godoMaum.woff") format("woff");
   font-weight: normal;
   font-style: normal;
 }
@@ -27,11 +23,14 @@ body {
   font-family: Arial, sans-serif;
 }
 
+/* 로고 이미지 */
 #sidebar img {
   width: 140px;
-  margin-left: 20px;
+  display: block;
+  margin: 0 auto; /* 로고 중앙 정렬 */
 }
 
+/* 로그인/회원가입 버튼 컨테이너 */
 #button-container {
   display: flex;
   flex-direction: column;
@@ -39,9 +38,10 @@ body {
   width: 100%;
   max-width: 200px;
   align-items: center;
-  margin-left: 5px;
+  /* 로그인 전: 기본적으로 화면 왼쪽에 있을 수 있으니 position 지정 X */
 }
 
+/* 로그아웃/도서배달/독서기록 버튼 컨테이너 */
 #button-container2 {
   position: absolute;
   display: flex;
@@ -50,14 +50,11 @@ body {
   width: 100%;
   max-width: 200px;
   align-items: center;
-  margin-left: 5px;
-  bottom: 20px;
+  bottom: 20px; 
   transform: translateX(-10%);
 }
 
-
-
-
+/* 버튼 공통 스타일 */
 #sidebar button {
   width: 150px;
   height: 40px;
@@ -67,64 +64,70 @@ body {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   margin-left: 10px;
 }
 #sidebar button:hover {
   background-color: #0000006e;
 }
+
+/* 지도 초기 스타일 */
 #map {
   flex: 1;
   height: 100vh;
-  margin-left: 20px;
+  /* 기존 margin-left 제거하여 중앙 정렬에 방해 없도록 */
 }
 
-@media screen and (min-width: 360px) and (min-height: 740px) {
+/* ──────────────────────────────────────────────────────────
+   ↓↓↓ (min-height: 740px)는 제거하고 (min-width: 360px)만 남김 ↓↓↓
+   ────────────────────────────────────────────────────────── */
+@media screen and (min-width: 360px) {
+  /* 로그인 전 버튼 (로그인, 회원가입) */
   #button-container {
     position: absolute;
-    top: 91%;
+    top: 91%; /* 기존과 동일하게 지도 아래쪽 */
     flex-direction: row;
     justify-content: center;
     gap: 10px;
     max-width: 400px;
+
+    /* 가로 중앙 정렬 */
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   #button-container button {
     max-width: 120px;
   }
 
+  /* 지도 */
   #map {
     position: absolute;
     top: 10%;
-    width: 90%; /* 전체 화면의 95% 너비 */
-    height: 80%; /* 전체 화면의 85% 높이 */
-    max-width: 335px; /* 최대 너비 제한 */
-    max-height: 800px; /* 최대 높이 제한 */
+    width: 90%;     /* 전체 화면의 90% 너비 */
+    height: 80%;    /* 전체 화면의 80% 높이 */
+    max-width: 335px;
+    max-height: 800px;
     border-radius: 10px;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+
+    /* 가로 중앙 정렬 */
+    left: 50%;
+    transform: translateX(-50%);
   }
 
-  /* #libgoimg {
-    max-width: 75%;
-    height: 10%;
-    margin-left: 20px;
-    margin-top: 5px;
-  } */
-
+  /* 로고 이미지 */
   #libgoimg {
-    width: 180px !important; /* 원하는 너비 */
-    height: auto; /* 비율 유지 */
-    margin-top: 10px; /* 위쪽 여백 추가 */
-    margin-bottom: 20px; /* 아래쪽 여백 추가 */
+    width: 180px !important;
+    height: auto;
+    margin-top: 10px;
+    margin-bottom: 20px;
     display: block;
-    margin-left: auto; /* 중앙 정렬 */
-    margin-right: auto; /* 중앙 정렬 */
+    margin-left: auto;
+    margin-right: auto;
   }
-  
-  
-  
 
-
+  /* 로그인 후 버튼 (로그아웃, 도서배달, 독서기록) */
   #button-container2 {
     position: absolute;
     display: flex;
@@ -133,13 +136,16 @@ body {
     width: 100%;
     max-width: 600px;
     align-items: center;
-    margin-left: 5px;
-    bottom: 10px;
-    left: 25px;
+
+    /* 기존 bottom: 10px 대신 top으로 위치 조정 */
+    top: 93%; /* 지도와 버튼 사이 여유 확보 (로그인 전보다 살짝 더 아래) */
+
+    /* 가로 중앙 정렬 */
+    left: 50%;
+    transform: translateX(-51.5%);
   }
 
   #button-container2 button {
     max-width: 180px;
   }
 }
-

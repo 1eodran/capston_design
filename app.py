@@ -27,6 +27,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import time
 
+from webdriver_manager.chrome import ChromeDriverManager
+
+
 app = Flask(__name__)
 CORS(app)
 
@@ -198,8 +201,10 @@ def scan_barcode():
 
     # ISBN 추출
     isbn = extract_isbn_from_image(img)
+    print("인식된 ISBN:", isbn)  # 디버깅용 출력
     if isbn:
         book_info = get_book_info(isbn)
+        print("네이버 API 응답:", book_info)  # 디버깅용 출력
         if book_info:
             # 책 정보를 HTML로 렌더링
             rendered_html = render_template('bookInfo.html', book_info=book_info)
@@ -445,7 +450,7 @@ def check_visit():
         new_visit = UserRecord(
             user_id=user_id,
             library_id=library_id,
-            isbn="VISIT_LOG",
+            isbn="",
             highlight="",
             memo="도서관 방문 기록"
         )
@@ -1111,6 +1116,8 @@ def searchlibchangwon():
         if not search_query or not selected_library:
             return render_template('searchlibchangwon.html', error="검색어와 도서관을 모두 입력해주세요.")
 
+        
+            
         # Selenium 설정
         service = Service('C:/Users/ksh07/Desktop/capston_design/chromedriver.exe')  # Chromedriver 경로
         options = Options()
@@ -1118,6 +1125,9 @@ def searchlibchangwon():
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(service=service, options=options)
+        
+        
+       
 
         try:
             driver.get("https://lib.changwon.go.kr/cl/search/data.html")

@@ -23,69 +23,73 @@
     </div>
 
     <script>
+        // 카메라 스트림을 시작하는 함수 (변경 없음)
         async function startCamera() {
             const video = document.getElementById('camera');
-            const resultElement = document.getElementById('result');
-
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 alert("카메라를 지원하지 않는 브라우저입니다.");
                 return;
             }
-
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' } // 후면 카메라
+                    video: { facingMode: 'environment' } // 후면 카메라 사용
                 });
                 video.srcObject = stream;
-
-                document.getElementById('scan-button').addEventListener('click', async () => {
-                    const barcodeArea = document.getElementById('barcode-area');
-                    const barcodeRect = barcodeArea.getBoundingClientRect();
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-
-                    // 비디오 해상도를 기준으로 스케일 계산
-                    const scaleX = video.videoWidth / video.offsetWidth;
-                    const scaleY = video.videoHeight / video.offsetHeight;
-
-                    const x = Math.round((barcodeRect.x - video.offsetLeft) * scaleX);
-                    const y = Math.round((barcodeRect.y - video.offsetTop) * scaleY);
-                    const width = Math.round(barcodeRect.width * scaleX);
-                    const height = Math.round(barcodeRect.height * scaleY);
-
-                    canvas.width = width;
-                    canvas.height = height;
-
-                    // 캔버스에 바코드 영역 복사
-                    ctx.drawImage(video, x, y, width, height, 0, 0, width, height);
-                    const imageData = canvas.toDataURL('image/png');
-
-                    // 캡쳐된 이미지를 서버로 전송
-                    try {
-                        const response = await fetch('/scan-barcode', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ image: imageData })
-                        });
-
-                        const data = await response.json();
-
-                        if (data.book_info) {
-                            resultElement.textContent = `ISBN: ${data.book_info.isbn}`;
-                        } else {
-                            resultElement.textContent = 'ISBN 인식 실패';
-                        }
-                    } catch (error) {
-                        console.error('바코드 인식 오류:', error);
-                    }
-                });
             } catch (error) {
                 console.error("카메라 접근 오류:", error);
                 alert("카메라 접근 실패: " + error.message);
             }
         }
 
-        document.getElementById('scan-button').addEventListener('click', startCamera);
+        // 스캔 버튼 클릭 시 실행되는 스캔 함수 (변경됨)
+        async function scanBarcode() {
+            const video = document.getElementById('camera');
+            const barcodeArea = document.getElementById('barcode-area');
+            const barcodeRect = barcodeArea.getBoundingClientRect();
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // 비디오 해상도 기준 스케일 계산
+            const scaleX = video.videoWidth / video.offsetWidth;
+            const scaleY = video.videoHeight / video.offsetHeight;
+            const x = Math.round((barcodeRect.x - video.offsetLeft) * scaleX);
+            const y = Math.round((barcodeRect.y - video.offsetTop) * scaleY);
+            const width = Math.round(barcodeRect.width * scaleX);
+            const height = Math.round(barcodeRect.height * scaleY);
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // 캔버스에 바코드 영역 복사
+            ctx.drawImage(video, x, y, width, height, 0, 0, width, height);
+            const imageData = canvas.toDataURL('image/png');
+
+            try {
+                const response = await fetch('/scan-barcode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageData })
+                });
+                const data = await response.json();
+
+                if (data.book_info) {
+                    // 서버에서 렌더링한 bookInfo.html의 HTML을 받아 페이지 전체를 교체
+                    document.open();
+                    document.write(data.html);
+                    document.close();
+                } else {
+                    document.getElementById('result').textContent = 'ISBN 인식 실패';
+                }
+            } catch (error) {
+                console.error('바코드 인식 오류:', error);
+            }
+        }
+
+        // DOMContentLoaded 시 카메라 시작 및 스캔 버튼 이벤트 등록 (변경됨)
+        document.addEventListener('DOMContentLoaded', () => {
+            startCamera();
+            document.getElementById('scan-button').addEventListener('click', scanBarcode);
+        });
 
         function goToInsertisbn() {
             window.location.href = "/insertisbn";

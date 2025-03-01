@@ -146,7 +146,6 @@
             if (userId) {
                 window.location.href = `/board?user_id=${userId}`; // user_id를 URL 매개변수로 추가
             } else {
-            alert("로그인이 필요합니다.");
             }
         }
     </script>
@@ -248,7 +247,6 @@
           try {
               const userId = sessionStorage.getItem("user_id"); // 세션에서 user_id 가져오기
               if (!userId) {
-                  alert("로그인이 필요합니다.");
                   return;
               }
 
@@ -381,7 +379,6 @@
       const userId = sessionStorage.getItem("user_id"); // 사용자 ID 가져오기
   
       if (!userId) {
-        alert("로그인이 필요합니다.");
         return;
       }
   
@@ -470,7 +467,6 @@
       async function shareRankInfo() {
           const userId = sessionStorage.getItem("user_id");
           if (!userId) {
-              alert("로그인이 필요합니다.");
               return;
           }
 
