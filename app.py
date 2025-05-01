@@ -18,6 +18,7 @@ import sqlite3
 from geopy.distance import geodesic
 
 #웹크롤링 chrome driver
+import chromedriver_autoinstaller
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -1119,13 +1120,17 @@ def searchlibchangwon():
         
             
         # Selenium 설정
-        service = Service('C:/Users/ksh07/Desktop/capston_design/chromedriver.exe')  # Chromedriver 경로
+        # 현재 설치된 크롬 버전에 맞는 chromedriver 자동 설치
+        chromedriver_autoinstaller.install()
+        #service = Service('C:/Users/ksh07/Desktop/capston_design/chromedriver.exe')  # Chromedriver 경로
         options = Options()
         options.add_argument('--headless')  # 브라우저 UI 숨김
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        driver = webdriver.Chrome(service=service, options=options)
+        #driver = webdriver.Chrome(service=service, options=options)
         
+        # 자동 설치된 chromedriver로 실행
+        driver = webdriver.Chrome(options=options)
         
        
 

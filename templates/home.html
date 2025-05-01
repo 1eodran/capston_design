@@ -459,6 +459,8 @@
 <script>
   // 사용자 마커 변수 추가
   let userLocationMarker = null;
+  // 최초 중심 이동 여부를 체크하는 변수 추가
+  let initialCenterSet = false;
 
   // 사용자 위치를 지도에 표시하는 함수
   function showUserLocationOnMap(lat, lng) {
@@ -485,8 +487,11 @@
       console.log("사용자 마커 위치 업데이트");
     }
 
-    // 지도 중심을 사용자 위치로 이동
-    map.setCenter(new kakao.maps.LatLng(lat, lng));
+    // 최초 한 번만 지도 중심 이동
+    if (!initialCenterSet) {
+      map.setCenter(new kakao.maps.LatLng(lat, lng));
+      initialCenterSet = true;
+    }
   }
 
   // 사용자 위치 정보 가져오기 및 마커 표시 함수
