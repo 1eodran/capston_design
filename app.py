@@ -917,7 +917,7 @@ def update_likes():
             "message": "공감이 반영되었습니다.(상대 사용자 +3points)",
             "likes": record.likes,
             "total_points": response_data.get("total_points", 0)
-        }), 200
+        }), 2001
 
     except Exception as e:
         db.session.rollback()
